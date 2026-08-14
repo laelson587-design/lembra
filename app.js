@@ -48,6 +48,7 @@ const PADRAO = {
   copiaEm: null,     // quando a última cópia de segurança foi tirada
   aberturas: 0,      // quantas vezes o app abriu: mede se o navegador apaga
   desde: null,       // data da primeira abertura que sobreviveu
+  ajustadoEm: null,  // última mexida nos ajustes, para a sincronia desempatar
 };
 
 // ---------------------------------------------------------------- estado
@@ -80,7 +81,13 @@ function estruturar(d) {
     copiaEm: d.copiaEm || null,
     aberturas: Number(d.aberturas) || 0,
     desde: d.desde || null,
+    ajustadoEm: d.ajustadoEm || null,
   };
+}
+
+/** Carimba os ajustes para a sincronização saber qual lado é o mais recente. */
+function ajustesMexidos() {
+  estado.ajustadoEm = new Date().toISOString();
 }
 
 /**
@@ -102,6 +109,7 @@ async function fixarArmazenamento() {
 function guardar() {
   try {
     localStorage.setItem(CHAVE, JSON.stringify(estado));
+    agendarSincronia();
     return true;
   } catch (e) {
     // Cota estourada é o único erro realista aqui, e acontece com conversa
@@ -485,18 +493,27 @@ function aplicarResultado(c, tipo) {
   else if (tipo === "LIBERADO") { c.status = "ABERTO"; }
 }
 
-/** Marca a data de voltar a procurar. Vale na discagem e na ficha. */
+/**
+ * Marca a data de voltar a procurar. Vale na discagem e na ficha.
+ *
+ * O evento guarda a data em `quando`, e não só no texto: é assim que a
+ * sincronização entre aparelhos consegue deduzir qual retorno vale sem ter de
+ * ler frase escrita para gente.
+ */
 function agendarRetorno(c, quando) {
   c.voltarEm = quando;
   // quem tinha sido descartado volta a valer: marcar retorno é o contrário
   // de "não me procure mais", e sem isto ele nunca reapareceria na fila
   if (c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE") c.status = "ABERTO";
-  registrar(c, "RETORNO", { texto: "Voltar em " + dataCurta(quando) });
+  registrar(c, "RETORNO", { quando, texto: "Voltar em " + dataCurta(quando) });
 }
 
 function desmarcarRetorno(c) {
   if (!c.voltarEm) return;
-  registrar(c, "RETORNO", { texto: "Retorno de " + dataCurta(c.voltarEm) + " desmarcado" });
+  registrar(c, "RETORNO", {
+    quando: null,
+    texto: "Retorno de " + dataCurta(c.voltarEm) + " desmarcado",
+  });
   c.voltarEm = null;
 }
 
@@ -797,6 +814,75 @@ async function trazerVariosDaAgenda() {
   avisar(partes.join(" · ") || "Nada para trazer.");
 }
 
+// --------------------------------------------------------------- sincronia
+
+let relogioSincronia = null;
+let sincronizando = false;
+
+/**
+ * Sincroniza pouco depois de a poeira baixar.
+ *
+ * Marcar um desfecho dispara três gravações seguidas; subir a cada uma seria
+ * conversa fiada com o servidor. O atraso junta tudo num envio só. E se não
+ * houver internet, some em silêncio: o aparelho já guardou, que é o que
+ * importa para quem está com o cliente na frente.
+ */
+function agendarSincronia() {
+  if (!nuvemConectada() || sincronizando) return;
+  clearTimeout(relogioSincronia);
+  relogioSincronia = setTimeout(() => { sincronizar(true); }, 4000);
+}
+
+async function sincronizar(silencioso) {
+  if (!nuvemConectada() || sincronizando) return;
+  sincronizando = true;
+  pintarConta();
+  try {
+    const combinado = await sincronizarNuvem(estado);
+    estado = estruturar(combinado);
+    localStorage.setItem(CHAVE, JSON.stringify(estado));   // sem realimentar
+    pintarTudo();
+    if (!silencioso) avisar("Sincronizado.");
+  } catch (e) {
+    if (!silencioso) avisar(e.semRede ? "Sem internet agora. Fica para depois." : e.message);
+  } finally {
+    sincronizando = false;
+    pintarConta();
+  }
+}
+
+function pintarConta() {
+  const caixa = $("#estado-conta");
+  const mostrar = (sel, cond) => $(sel).classList.toggle("oculto", !cond);
+
+  mostrar("#configurar-nuvem", !nuvemConfigurada());
+  mostrar("#entrar-nuvem", nuvemConfigurada() && !nuvemConectada());
+  mostrar("#conta-ligada", nuvemConectada());
+
+  if (!nuvemConfigurada()) {
+    caixa.className = "veredito cuidado";
+    caixa.innerHTML = `<p class="titulo">Sem servidor ainda</p>
+      <p class="detalhe">Enquanto não configurar, tudo vive só neste aparelho.</p>`;
+    return;
+  }
+  if (!nuvemConectada()) {
+    caixa.className = "veredito cuidado";
+    caixa.innerHTML = `<p class="titulo">Fora da conta</p>
+      <p class="detalhe">Entre para os contatos sobreviverem à troca de aparelho.</p>`;
+    return;
+  }
+  if (sincronizando) {
+    caixa.className = "veredito novo";
+    caixa.innerHTML = `<p class="titulo">Sincronizando…</p>`;
+    return;
+  }
+  caixa.className = "veredito ok";
+  caixa.innerHTML = `<p class="titulo">${escapar(nuvem.email || "Conectado")}</p>
+    <p class="detalhe">${nuvem.sincronizadoEm
+      ? `Última sincronia em ${escapar(dataCurta(nuvem.sincronizadoEm))}, ${escapar(haQuanto(nuvem.sincronizadoEm))}.`
+      : "Ainda não sincronizou."}</p>`;
+}
+
 // ------------------------------------------------------- aparelho e instalação
 
 /**
@@ -1071,7 +1157,13 @@ function irPara(tela) {
   window.scrollTo(0, 0);
   if (tela === "fila") pintarFila();
   if (tela === "contatos") pintarContatos();
-  if (tela === "ajustes") { pintarModelos(); pintarEstadoCopia(); pintarDiagnostico(); }
+  if (tela === "ajustes") {
+    pintarModelos(); pintarEstadoCopia(); pintarConta(); pintarDiagnostico();
+    if (nuvemConfigurada()) {
+      $("#nuvem-url").value = nuvem.url;
+      $("#nuvem-chave").value = nuvem.publica;
+    }
+  }
 }
 
 // --------------------------------------------------------------- ligações
@@ -1244,6 +1336,7 @@ function ligar() {
   const salvarEu = () => {
     estado.eu.nome = $("#eu-nome").value.trim();
     estado.eu.instituicao = $("#eu-instituicao").value.trim();
+    ajustesMexidos();
     guardar();
     $("#previa").textContent = montarTexto();
   };
@@ -1254,6 +1347,7 @@ function ligar() {
     estado.regua.um = Math.max(1, Number($("#regua-1").value) || 15);
     estado.regua.dois = Math.max(1, Number($("#regua-2").value) || 45);
     estado.regua.respondeu = Math.max(1, Number($("#regua-r").value) || 7);
+    ajustesMexidos();
     guardar();
     pintarFila();
     avisar("Régua atualizada.");
@@ -1267,6 +1361,57 @@ function ligar() {
     guardar();
     pintarModelos();
     editarModelo(id);
+  });
+
+  // -- conta e sincronização
+  $("#salvar-nuvem").addEventListener("click", () => {
+    const url = $("#nuvem-url").value.trim();
+    const chave = $("#nuvem-chave").value.trim();
+    // https na vida real; http só em localhost, que é onde se testa
+    const bom = /^https:\/\/.+/.test(url) || /^http:\/\/localhost(:\d+)?/.test(url);
+    if (!bom) return avisar("O endereço tem de começar com https://");
+    if (chave.length < 20) return avisar("Essa chave parece incompleta.");
+    configurarNuvem(url, chave);
+    pintarConta();
+    avisar("Servidor guardado. Agora crie a conta ou entre.");
+  });
+
+  $("#trocar-servidor").addEventListener("click", () => {
+    configurarNuvem("", "");
+    pintarConta();
+  });
+
+  const comCredenciais = async (acao, oQueFaz) => {
+    const email = $("#conta-email").value.trim();
+    const senha = $("#conta-senha").value;
+    if (!email || !senha) return avisar("Preencha e-mail e senha.");
+    avisar(oQueFaz + "…");
+    try {
+      await acao(email, senha);
+    } catch (e) {
+      return avisar(e.semRede ? "Sem internet agora." : e.message);
+    }
+    $("#conta-senha").value = "";
+    pintarConta();
+    if (nuvemConectada()) await sincronizar(false);
+  };
+
+  $("#entrar-conta").addEventListener("click", () =>
+    comCredenciais(entrarNaConta, "Entrando"));
+
+  $("#criar-conta").addEventListener("click", () =>
+    comCredenciais(async (email, senha) => {
+      const r = await criarConta(email, senha);
+      if (!r.entrou) avisar("Conta criada. Confirme o e-mail e depois toque em Entrar.");
+    }, "Criando conta"));
+
+  $("#sincronizar-agora").addEventListener("click", () => sincronizar(false));
+
+  $("#sair-conta").addEventListener("click", () => {
+    if (!confirm("Sair da conta neste aparelho?\n\nOs contatos continuam aqui e no servidor.")) return;
+    sairDaConta();
+    pintarConta();
+    avisar("Você saiu da conta.");
   });
 
   $("#enviar-copia").addEventListener("click", enviarCopia);
@@ -1333,6 +1478,8 @@ function pintarTudo() {
   pintarFila();
   pintarContatos();
   pintarEstadoCopia();
+  pintarConta();
+  if (chaveFicha && estado.contatos[chaveFicha]) abrirFicha(chaveFicha);
 }
 
 async function comecar() {
@@ -1357,6 +1504,10 @@ async function comecar() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+
+  // Entrar já traz de volta o que o aparelho tiver perdido — é o motivo de
+  // existir a conta, então acontece na abertura e não sob pedido.
+  if (nuvemConectada()) sincronizar(true);
 
   const fixado = await fixarArmazenamento();
   $("#estado-guarda").textContent =

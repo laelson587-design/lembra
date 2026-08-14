@@ -9,12 +9,13 @@
  * Suba a VERSAO quando quiser forçar a limpeza imediata de todo mundo.
  */
 
-const VERSAO = "lembra-v1";
+const VERSAO = "lembra-v2";
 
 const CASCA = [
   "./",
   "./index.html",
   "./estilo.css",
+  "./nuvem.js",
   "./app.js",
   "./manifest.json",
   "./icone-192.png",

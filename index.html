@@ -174,6 +174,50 @@
     <p class="dica">A taxa de resposta de cada modelo aparece na lista. É o número que
        mais vale aqui dentro: troque o texto que responde pouco.</p>
 
+    <h2>Sua conta</h2>
+    <div id="estado-conta" class="veredito"></div>
+
+    <!-- Sem servidor configurado não há o que fazer aqui além de configurar. -->
+    <div id="configurar-nuvem" class="oculto">
+      <p class="dica">Cole os dois valores do painel da Supabase, em
+         <b>Project Settings → API</b>. A chave <b>anon public</b> pode ficar
+         guardada aqui: sozinha ela não abre nada, quem protege é a regra do banco.</p>
+      <label class="campo">
+        <span class="rotulo">Endereço do projeto</span>
+        <input id="nuvem-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+      </label>
+      <label class="campo">
+        <span class="rotulo">Chave anon public</span>
+        <input id="nuvem-chave" type="text" placeholder="eyJhbGciOi…" autocomplete="off">
+      </label>
+      <button id="salvar-nuvem" class="secundario">Guardar servidor</button>
+    </div>
+
+    <!-- Configurado e fora da conta: entrar ou criar. -->
+    <div id="entrar-nuvem" class="oculto">
+      <label class="campo">
+        <span class="rotulo">Seu e-mail</span>
+        <input id="conta-email" type="email" inputmode="email" autocomplete="username"
+               placeholder="voce@exemplo.com">
+      </label>
+      <label class="campo">
+        <span class="rotulo">Senha</span>
+        <input id="conta-senha" type="password" autocomplete="current-password"
+               placeholder="pelo menos 6 caracteres">
+      </label>
+      <button id="entrar-conta" class="principal">Entrar</button>
+      <button id="criar-conta" class="secundario">Criar conta</button>
+      <button id="trocar-servidor" class="secundario">Trocar o servidor</button>
+    </div>
+
+    <!-- Dentro da conta. -->
+    <div id="conta-ligada" class="oculto">
+      <button id="sincronizar-agora" class="principal">Sincronizar agora</button>
+      <button id="sair-conta" class="secundario">Sair da conta neste aparelho</button>
+      <p class="dica">Sair não apaga nada daqui nem de lá. Da próxima vez que
+         entrar, o que estiver no servidor volta.</p>
+    </div>
+
     <h2>Diagnóstico</h2>
     <div id="diagnostico" class="veredito"></div>
     <div id="detalhes-diagnostico" class="lista"></div>
@@ -270,6 +314,7 @@
 
 <div id="aviso" class="aviso oculto"></div>
 
+<script src="nuvem.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -151,6 +151,39 @@ aparelho de quem usa e nunca chegam ao repositório.
 `node scripts/icone.js` regenera `icone-192.png` e `icone-512.png`. O desenho é
 feito por matemática, sem biblioteca nenhuma.
 
+## Conta e sincronização
+
+O aparelho continua sendo onde o app lê e escreve — velocidade no balcão não
+pode depender de sinal. A conta é uma **segunda cópia**, que se acerta quando
+há internet e devolve tudo quando o aparelho perde: Safari apagou, celular
+quebrou, chip caiu.
+
+### Ligar
+
+1. Crie conta em **supabase.com** (gratuito, sem cartão) e um projeto novo.
+2. No **SQL Editor**, cole o conteúdo de [`banco.sql`](banco.sql) e execute.
+3. Em **Project Settings → API**, copie o **Project URL** e a chave
+   **anon public**.
+4. No app: **Ajustes → Sua conta**, cole os dois e toque em *Guardar servidor*.
+5. Ainda em Ajustes, **Criar conta** com e-mail e senha.
+
+A chave `anon` pode ficar guardada no aparelho e aparecer no código: sozinha
+ela não abre nada. Quem protege é a regra de linha do banco, que garante que
+cada conta só enxerga a própria. Chave publicada sem essa regra é que vaza —
+não a chave em si.
+
+### Como dois aparelhos se acertam
+
+Sem escolher um vencedor, que é onde esse tipo de código costuma perder dado.
+
+O histórico é **só acrescentado, nunca alterado** — então juntar dois aparelhos
+é juntar duas listas de eventos e tirar as repetições. A partir da lista
+combinada, situação e data de retorno são **deduzidas**, em vez de guardadas
+como verdade própria. Assim não existe campo que possa discordar do histórico.
+
+Só os ajustes (seu nome, a régua, os modelos) não têm histórico; nesses vale o
+lado mexido por último.
+
 ## Onde os dados ficam
 
 No `localStorage` do navegador, naquele aparelho. Sobrevive a fechar o app,
