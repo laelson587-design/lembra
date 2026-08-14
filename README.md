@@ -34,10 +34,26 @@ Ou, quando é o caso:
 
 > 🚫 **Pediu para não receber mais.** Não mande.
 
-Não existe importação de lista, e isso é decisão, não limitação: a base do
-trabalho não é sua, e copiá-la para um aplicativo pessoal é problema de LGPD e
-de contrato. Aqui entra só o **seu registro de contato**, construído um número
-por vez, conforme você trabalha. Em duas semanas de uso já são centenas.
+Não existe importação da lista do trabalho, e isso é decisão, não limitação: a
+base não é sua, e copiá-la para um aplicativo pessoal é problema de LGPD e de
+contrato. Aqui entra só o **seu registro de contato**, construído um número por
+vez, conforme você trabalha. Em duas semanas de uso já são centenas.
+
+## De onde os dados podem vir
+
+**Do WhatsApp, não.** Nenhuma página consegue ler as conversas nem os contatos
+do aplicativo — ele é fechado, e a única saída oficial é o "Exportar conversa",
+que o Lembra importa. O que lê o WhatsApp por fora são as bibliotecas que
+imitam o WhatsApp Web, e são exatamente elas que derrubam o número.
+
+**Da agenda do celular, sim.** No Chrome do Android existe uma permissão do
+próprio sistema: o app pede, aparece a tela do Android, e você escolhe quem
+entregar. Não é acesso à agenda — é você passando os contatos um a um. Há dois
+caminhos: um contato na aba **Discar** e vários de uma vez na aba **Contatos**.
+No computador e no iPhone o botão nem aparece, porque a permissão não existe.
+
+**Digitando**, sempre. É o caminho que funciona em qualquer aparelho, e é o
+mesmo número que você digitaria no WhatsApp de qualquer jeito.
 
 ## O que tem dentro
 
@@ -127,10 +143,28 @@ aparelho de quem usa e nunca chegam ao repositório.
 `node scripts/icone.js` regenera `icone-192.png` e `icone-512.png`. O desenho é
 feito por matemática, sem biblioteca nenhuma.
 
+## Onde os dados ficam
+
+No `localStorage` do navegador, naquele aparelho. Sobrevive a fechar o app,
+reiniciar o celular e **perder o chip** — o número do WhatsApp e os dados do
+navegador não têm relação nenhuma.
+
+Não sobrevive a: limpar os dados do navegador, trocar de celular, ou usar outro
+navegador (o Chrome e o Samsung Internet guardam separado).
+
+Duas defesas, e as duas estão no app:
+
+1. Na abertura ele pede ao sistema para **não descartar** o armazenamento.
+   Instalar na tela inicial aumenta a chance de o Android conceder.
+2. **Enviar cópia** abre a folha de compartilhar do celular, então o arquivo vai
+   direto para o Drive, o e-mail ou uma conversa. Cópia baixada some numa pasta
+   que ninguém revisita; cópia enviada sobrevive à troca de aparelho. Os Ajustes
+   mostram quando foi a última e avisam depois de 30 dias.
+
 ## Limites conhecidos
 
 - O aparelho guarda cerca de 5 MB no total. Conversas importadas são cortadas
   em 200 mil caracteres cada, ficando com as mensagens mais recentes.
-- **Apagar os dados do navegador apaga tudo.** Exporte cópia de vez em quando.
 - A taxa de resposta por modelo só conta o que foi marcado na mão. Se você não
   marcar o desfecho, o número não significa nada.
+- A escolha pela agenda depende do Chrome no Android. Nos outros, digitando.

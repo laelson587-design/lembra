@@ -45,6 +45,7 @@ const PADRAO = {
   regua: { um: 15, dois: 45, respondeu: 7 },
   modelos: MODELOS_PADRAO,
   contatos: {},
+  copiaEm: null,     // quando a última cópia de segurança foi tirada
 };
 
 // ---------------------------------------------------------------- estado
@@ -74,7 +75,24 @@ function estruturar(d) {
     regua: { um: 15, dois: 45, respondeu: 7, ...(d.regua || {}) },
     modelos: Array.isArray(d.modelos) && d.modelos.length ? d.modelos : MODELOS_PADRAO,
     contatos: d.contatos || {},
+    copiaEm: d.copiaEm || null,
   };
+}
+
+/**
+ * Pede ao Android que não jogue fora os dados quando o aparelho ficar
+ * apertado de espaço. Sem isto, o sistema pode limpar o armazenamento de um
+ * site que ele considera descartável — e aqui não é site, é a agenda de
+ * trabalho de alguém. Instalar o app na tela inicial ajuda a conseguir.
+ */
+async function fixarArmazenamento() {
+  try {
+    if (!navigator.storage || !navigator.storage.persist) return null;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch (e) {
+    return null;
+  }
 }
 
 function guardar() {
@@ -638,6 +656,149 @@ function lerExportacao(cru) {
   return { texto: limpo.trim(), mensagens };
 }
 
+// -------------------------------------------------------- agenda do celular
+
+/**
+ * O Android deixa o site pedir contatos ao dono do aparelho, com uma tela do
+ * próprio sistema onde ele escolhe quem entrega. Não é acesso à agenda: é o
+ * usuário passando um por um. Só existe no Chrome do Android — no computador
+ * e no iPhone o botão nem aparece.
+ *
+ * Do WhatsApp não há equivalente: nenhum site lê conversa nem contato de lá.
+ * O que lê são as bibliotecas piratas, e são elas que derrubam o número.
+ */
+const TEM_AGENDA = "contacts" in navigator && "ContactsManager" in window;
+
+async function pedirDaAgenda(varios) {
+  try {
+    return await navigator.contacts.select(["name", "tel"], { multiple: !!varios });
+  } catch (e) {
+    // cancelar a escolha também cai aqui; não é erro que mereça alarde
+    return [];
+  }
+}
+
+/** Do que o Android devolve, o que interessa: um nome e um telefone válido. */
+function limparDaAgenda(bruto) {
+  const nome = (bruto.name && bruto.name[0] ? String(bruto.name[0]) : "").trim();
+  const tels = (bruto.tel || []).map(normalizar).filter(valido);
+  return tels.length ? { nome, numero: tels[0] } : null;
+}
+
+async function escolherDaAgenda() {
+  const [escolhido] = await pedirDaAgenda(false);
+  if (!escolhido) return;
+  const c = limparDaAgenda(escolhido);
+  if (!c) return avisar("Esse contato não tem telefone que dê para usar.");
+
+  const n = $("#numero");
+  n.value = c.numero;
+  n.dispatchEvent(new Event("input", { bubbles: true }));
+  if (c.nome) {
+    $("#nome").value = c.nome;
+    $("#previa").textContent = montarTexto();
+  }
+}
+
+async function trazerVariosDaAgenda() {
+  const escolhidos = await pedirDaAgenda(true);
+  if (!escolhidos.length) return;
+
+  let novos = 0, jaTinha = 0, semTelefone = 0;
+  for (const bruto of escolhidos) {
+    const c = limparDaAgenda(bruto);
+    if (!c) { semTelefone++; continue; }
+    const existente = achar(c.numero);
+    if (existente) {
+      if (!existente.nome && c.nome) existente.nome = c.nome;
+      jaTinha++;
+      continue;
+    }
+    criar(c.numero, c.nome);
+    novos++;
+  }
+  guardar();
+  pintarContatos();
+  pintarFila();
+
+  const partes = [];
+  if (novos) partes.push(`${novos} ${novos === 1 ? "novo" : "novos"}`);
+  if (jaTinha) partes.push(`${jaTinha} já ${jaTinha === 1 ? "estava" : "estavam"} aqui`);
+  if (semTelefone) partes.push(`${semTelefone} sem telefone`);
+  avisar(partes.join(" · ") || "Nada para trazer.");
+}
+
+// --------------------------------------------------------- cópia de segurança
+
+function conteudoDaCopia() {
+  return JSON.stringify(estado, null, 2);
+}
+
+function nomeDaCopia() {
+  return `lembra-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+function marcarCopiaFeita() {
+  estado.copiaEm = new Date().toISOString();
+  guardar();
+  pintarEstadoCopia();
+}
+
+/**
+ * Baixar arquivo no celular esconde a cópia numa pasta que ninguém revisita.
+ * Com a folha de compartilhar, ela vai direto para o Drive, o e-mail ou uma
+ * conversa — que é onde a cópia realmente sobrevive à troca de aparelho.
+ */
+async function enviarCopia() {
+  const arquivo = new File([conteudoDaCopia()], nomeDaCopia(), { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], title: "Cópia do Lembra" });
+      marcarCopiaFeita();
+      avisar("Cópia enviada.");
+    } catch (e) {
+      // o usuário fechou a folha; não é erro
+    }
+    return;
+  }
+  baixarCopia();
+  avisar("Este aparelho não abre a folha de compartilhar. O arquivo foi baixado.");
+}
+
+function baixarCopia() {
+  const url = URL.createObjectURL(new Blob([conteudoDaCopia()], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nomeDaCopia();
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  marcarCopiaFeita();
+}
+
+function pintarEstadoCopia() {
+  const el = $("#estado-copia");
+  const quantos = Object.keys(estado.contatos).length;
+
+  if (!quantos) {
+    el.className = "veredito";
+    el.innerHTML = `<p class="detalhe">Ainda não há nada para copiar.</p>`;
+    return;
+  }
+  if (!estado.copiaEm) {
+    el.className = "veredito cuidado";
+    el.innerHTML = `<p class="titulo">Nunca copiado</p>
+      <p class="detalhe">${quantos} ${quantos === 1 ? "contato existe" : "contatos existem"}
+      só neste aparelho.</p>`;
+    return;
+  }
+  const dias = diasEntre(dia(estado.copiaEm), hoje());
+  const velha = dias >= 30;
+  el.className = "veredito " + (velha ? "cuidado" : "ok");
+  el.innerHTML = `<p class="titulo">${velha ? "Cópia velha" : "Cópia em dia"}</p>
+    <p class="detalhe">Última em ${escapar(dataCurta(estado.copiaEm))}, ${escapar(haQuanto(estado.copiaEm))}
+    · ${quantos} ${quantos === 1 ? "contato" : "contatos"}.</p>`;
+}
+
 // ------------------------------------------------------------- modelos
 
 /** Taxa de resposta de um modelo: respondeu logo depois de ter sido usado. */
@@ -709,7 +870,7 @@ function irPara(tela) {
   window.scrollTo(0, 0);
   if (tela === "fila") pintarFila();
   if (tela === "contatos") pintarContatos();
-  if (tela === "ajustes") pintarModelos();
+  if (tela === "ajustes") { pintarModelos(); pintarEstadoCopia(); }
 }
 
 // --------------------------------------------------------------- ligações
@@ -872,17 +1033,19 @@ function ligar() {
     editarModelo(id);
   });
 
+  $("#enviar-copia").addEventListener("click", enviarCopia);
   $("#exportar").addEventListener("click", () => {
-    const conteudo = JSON.stringify(estado, null, 2);
-    const url = URL.createObjectURL(new Blob([conteudo], { type: "application/json" }));
-    const a = document.createElement("a");
-    const d = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `lembra-${d}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    avisar("Cópia gerada. Guarde num lugar seguro.");
+    baixarCopia();
+    avisar("Arquivo baixado. Guarde num lugar seguro.");
   });
+
+  // -- agenda do celular
+  $("#da-agenda").classList.toggle("oculto", !TEM_AGENDA);
+  $("#trazer-agenda").classList.toggle("oculto", !TEM_AGENDA);
+  if (TEM_AGENDA) {
+    $("#da-agenda").addEventListener("click", escolherDaAgenda);
+    $("#trazer-agenda").addEventListener("click", trazerVariosDaAgenda);
+  }
 
   $("#importar").addEventListener("change", (ev) => {
     const arquivo = ev.target.files && ev.target.files[0];
@@ -933,9 +1096,10 @@ function pintarTudo() {
   pintarDiscagem();
   pintarFila();
   pintarContatos();
+  pintarEstadoCopia();
 }
 
-function comecar() {
+async function comecar() {
   $("#marca-dia").textContent = new Date().toLocaleDateString("pt-BR",
     { weekday: "short", day: "2-digit", month: "short" });
   iniciarCampos();
@@ -944,11 +1108,27 @@ function comecar() {
 
   if (!estado.eu.nome) {
     avisar("Comece pelos Ajustes: ponha seu nome na mensagem.");
+  } else if (temCopiaVelha()) {
+    avisar("Faz mais de 30 dias sem cópia. Ajustes → enviar cópia.");
   }
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+
+  const fixado = await fixarArmazenamento();
+  $("#estado-guarda").textContent =
+    fixado === true
+      ? "Este aparelho promete não apagar os dados sozinho."
+      : fixado === false
+        ? "O aparelho pode apagar estes dados se ficar sem espaço. Instalar o app na tela inicial reduz o risco — e a cópia resolve de vez."
+        : "";
 }
 
-comecar();
+function temCopiaVelha() {
+  if (!Object.keys(estado.contatos).length) return false;
+  if (!estado.copiaEm) return true;
+  return diasEntre(dia(estado.copiaEm), hoje()) >= 30;
+}
+
+comecar().catch((e) => console.error("não deu para começar", e));

@@ -27,6 +27,9 @@
              autocomplete="off" enterkeyhint="done">
     </label>
 
+    <!-- Só aparece onde o aparelho permite (Android/Chrome). Poupa digitação. -->
+    <button id="da-agenda" class="secundario oculto">Escolher da agenda do celular</button>
+
     <!-- O veredito. É o coração do app: aparece ANTES de mandar, não depois. -->
     <div id="veredito" class="veredito oculto"></div>
 
@@ -91,6 +94,7 @@
       <button class="chip" data-f="MUDOS">Nunca responderam</button>
       <button class="chip" data-f="NAO_PERTURBE">Não perturbe</button>
     </div>
+    <button id="trazer-agenda" class="secundario oculto">Trazer vários da agenda do celular</button>
     <div id="contatos-lista" class="lista"></div>
   </div>
 </section>
@@ -137,13 +141,17 @@
        mais vale aqui dentro: troque o texto que responde pouco.</p>
 
     <h2>Cópia de segurança</h2>
+    <div id="estado-copia" class="veredito"></div>
     <p class="dica">Tudo fica guardado neste aparelho, e em nenhum outro lugar.
-       Se o celular sumir, some junto. Exporte de vez em quando.</p>
-    <button id="exportar" class="secundario">Exportar cópia</button>
+       Some se você limpar os dados do navegador ou trocar de celular — por isso
+       a cópia. Mande para o seu e-mail ou para o Drive e ela sobrevive a tudo.</p>
+    <button id="enviar-copia" class="principal">Enviar cópia para o Drive ou e-mail</button>
+    <button id="exportar" class="secundario">Só baixar o arquivo</button>
     <label class="secundario arquivo">
       Restaurar cópia
       <input id="importar" type="file" accept="application/json,.json" hidden>
     </label>
+    <p class="dica" id="estado-guarda"></p>
 
     <h2 class="perigo">Zona de risco</h2>
     <button id="apagar" class="perigoso">Apagar tudo</button>
