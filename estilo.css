@@ -179,6 +179,10 @@ button { font: inherit; cursor: pointer; }
 .veredito.cuidado .titulo { color: var(--atencao); }
 .veredito.pare .titulo    { color: var(--ruim); }
 
+.passos { margin: 10px 0 4px; padding-left: 20px; font-size: 14px; color: var(--fraco); }
+.passos li { margin-bottom: 6px; }
+.passos b { color: var(--texto); }
+
 .previa {
   margin: 4px 0 14px; padding: 14px 16px;
   background: var(--carta); border: 1px dashed var(--borda);

@@ -30,6 +30,25 @@
     <!-- Só aparece onde o aparelho permite (Android/Chrome). Poupa digitação. -->
     <button id="da-agenda" class="secundario oculto">Escolher da agenda do celular</button>
 
+    <!-- No iPhone o navegador não oferece instalar. Sem esta instrução o app
+         fica numa aba, e o Safari apaga os dados de aba. -->
+    <div id="instalar" class="veredito pare oculto">
+      <p class="titulo">Instale antes de usar</p>
+      <p class="detalhe">No iPhone, o Safari <b>apaga os dados</b> de site que
+        fica só em aba. Enquanto o Lembra não estiver na Tela de Início, ele
+        vai esquecer tudo.</p>
+      <ol class="passos">
+        <li>Toque no botão <b>Compartilhar</b>, o quadradinho com a seta para cima,
+            embaixo na barra do Safari.</li>
+        <li>Role e escolha <b>Adicionar à Tela de Início</b>.</li>
+        <li>Confirme e <b>feche o Safari</b>.</li>
+        <li>Abra pelo <b>ícone azul</b> na tela do celular. Só por ele, daqui em diante.</li>
+      </ol>
+      <p class="detalhe"><b>Atenção:</b> o app aberto pelo ícone começa vazio — o
+        iPhone guarda separado do Safari. Se você já tem uma cópia salva, use
+        <b>Ajustes → Restaurar cópia</b> lá dentro.</p>
+    </div>
+
     <!-- Se abriu vazio e não devia, o caminho de volta tem de estar à vista. -->
     <div id="sumiu" class="veredito cuidado oculto">
       <p class="titulo">Nenhum contato guardado</p>

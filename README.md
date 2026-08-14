@@ -177,15 +177,31 @@ A medida que importa é o **contador de aberturas**. Se ele não sobe quando voc
 fecha e abre o navegador, o armazenamento está sendo limpo, e não há conserto
 possível dentro do app — a causa é externa:
 
+- **iPhone em aba do Safari** — a causa mais comum, e a mais silenciosa. Ver
+  abaixo;
 - **aba anônima** (o navegador apaga tudo ao fechar, por definição);
 - a opção **"limpar dados/cookies ao sair"**, ligada nas configurações;
-- no iPhone, o Safari **descarta dados de sites** que não foram adicionados à
-  tela inicial depois de alguns dias sem uso;
-- o sistema recuperando espaço num aparelho cheio — o caso mais raro, e o único
-  que instalar na tela inicial resolve sozinho.
+- aplicativo de limpeza ou "otimizador", que varre dados de navegador junto;
+- o sistema recuperando espaço num aparelho cheio — o caso mais raro.
 
 O painel também mostra se o app está instalado, se o sistema prometeu não
 apagar, quanto espaço há e quando foi a última cópia.
+
+### No iPhone, instalar não é opcional
+
+O Safari apaga o armazenamento de site que vive em aba. É a proteção contra
+rastreamento dele, e ela não distingue rastreador de ferramenta de trabalho:
+quem só abre pelo link perde os contatos.
+
+Adicionado à Tela de Início, o mesmo endereço passa a ser tratado como
+aplicativo e fica de fora dessa limpeza. E como o Safari **não oferece**
+instalar sozinho — diferente do Chrome no Android —, o app mostra o passo a
+passo na tela de Discar enquanto detectar iPhone fora da Tela de Início.
+
+Uma armadilha nessa migração: **o app instalado começa vazio.** O iOS guarda o
+armazenamento do ícone separado do armazenamento do Safari, então o que estava
+na aba não vai junto. Exporte a cópia pela aba antes, e restaure dentro do
+ícone.
 
 ## Limites conhecidos
 

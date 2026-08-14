@@ -377,8 +377,13 @@ function pintarDiscagem() {
 
   const mostrar = (sel, cond) => $(sel).classList.toggle("oculto", !cond);
 
+  // No iPhone fora da Tela de Início, o aviso de instalar vem antes de tudo:
+  // não adianta o app funcionar bem se o Safari vai apagar no fim do dia.
+  const precisaInstalar = EH_IPHONE && !estaInstalado();
+  mostrar("#instalar", precisaInstalar && !ok);
+
   // O aviso de "sumiu tudo" só faz sentido com a tela parada e vazia.
-  mostrar("#sumiu", !ok && Object.keys(estado.contatos).length === 0);
+  mostrar("#sumiu", !ok && !precisaInstalar && Object.keys(estado.contatos).length === 0);
 
   if (!ok) {
     chaveAtual = null;
@@ -792,6 +797,29 @@ async function trazerVariosDaAgenda() {
   avisar(partes.join(" · ") || "Nada para trazer.");
 }
 
+// ------------------------------------------------------- aparelho e instalação
+
+/**
+ * O iPhone é um caso à parte, e é o que quebra este app se ficar sem aviso.
+ *
+ * O Safari apaga o armazenamento de site que vive em aba — é a proteção
+ * contra rastreamento dele, e ela não distingue rastreador de ferramenta de
+ * trabalho. Quem só está de aba perde tudo. Adicionado à Tela de Início, o
+ * mesmo endereço vira aplicativo e fica de fora dessa limpeza.
+ *
+ * E o Safari não oferece instalar sozinho, como o Chrome do Android faz: se o
+ * app não explicar o caminho, ninguém encontra.
+ */
+const EH_IPHONE = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function estaInstalado() {
+  // navigator.standalone é o jeito do iOS, e o único confiável nas versões
+  // mais antigas; a media query é o padrão, que o Android usa.
+  return navigator.standalone === true
+    || window.matchMedia("(display-mode: standalone)").matches;
+}
+
 // ------------------------------------------------------------- diagnóstico
 
 /**
@@ -807,7 +835,7 @@ async function levantarDiagnostico() {
     aberturas: estado.aberturas,
     desde: estado.desde,
     contatos: Object.keys(estado.contatos).length,
-    instalado: window.matchMedia("(display-mode: standalone)").matches,
+    instalado: estaInstalado(),
     fixado: null,
     usado: null,
     total: null,
@@ -850,7 +878,16 @@ async function pintarDiagnostico() {
   if (!d.escreve) {
     topo.className = "veredito pare";
     topo.innerHTML = `<p class="titulo">O navegador não deixa guardar nada</p>
-      <p class="detalhe">Provavelmente é aba anônima. Feche e abra numa aba normal.</p>`;
+      <p class="detalhe">Provavelmente é aba anônima ou privada. Feche e abra
+      numa aba normal.</p>`;
+  } else if (EH_IPHONE && !d.instalado) {
+    // No iPhone isto não é um risco entre outros: é a causa certa da perda.
+    topo.className = "veredito pare";
+    topo.innerHTML = `<p class="titulo">O Safari vai apagar tudo</p>
+      <p class="detalhe">Você está numa aba do Safari, e ele apaga os dados de
+      site que não foi adicionado à Tela de Início. Volte à aba <b>Discar</b> e
+      siga os quatro passos para instalar — é a única forma de os contatos
+      sobreviverem no iPhone.</p>`;
   } else if (d.aberturas <= 1 && d.contatos === 0) {
     topo.className = "veredito novo";
     topo.innerHTML = `<p class="titulo">Primeira abertura</p>
