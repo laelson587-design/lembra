@@ -30,6 +30,14 @@
     <!-- Só aparece onde o aparelho permite (Android/Chrome). Poupa digitação. -->
     <button id="da-agenda" class="secundario oculto">Escolher da agenda do celular</button>
 
+    <!-- Se abriu vazio e não devia, o caminho de volta tem de estar à vista. -->
+    <div id="sumiu" class="veredito cuidado oculto">
+      <p class="titulo">Nenhum contato guardado</p>
+      <p class="detalhe">Se você já tinha contatos aqui, eles foram apagados pelo
+         navegador. Vá em <b>Ajustes → Diagnóstico</b> para entender, e em
+         <b>Restaurar cópia</b> para trazer de volta.</p>
+    </div>
+
     <!-- O veredito. É o coração do app: aparece ANTES de mandar, não depois. -->
     <div id="veredito" class="veredito oculto"></div>
 
@@ -146,6 +154,14 @@
     <button id="novo-modelo" class="secundario">Criar modelo</button>
     <p class="dica">A taxa de resposta de cada modelo aparece na lista. É o número que
        mais vale aqui dentro: troque o texto que responde pouco.</p>
+
+    <h2>Diagnóstico</h2>
+    <div id="diagnostico" class="veredito"></div>
+    <div id="detalhes-diagnostico" class="lista"></div>
+    <p class="dica">Se o contador de aberturas <b>não subir</b> depois de você
+       fechar e abrir o navegador, é o navegador que está apagando os dados —
+       e aí o problema não é o app. Os casos comuns são a aba anônima e a opção
+       "limpar dados ao sair". Instalar na tela inicial também ajuda.</p>
 
     <h2>Cópia de segurança</h2>
     <div id="estado-copia" class="veredito"></div>

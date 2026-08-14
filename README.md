@@ -169,6 +169,24 @@ Duas defesas, e as duas estão no app:
    que ninguém revisita; cópia enviada sobrevive à troca de aparelho. Os Ajustes
    mostram quando foi a última e avisam depois de 30 dias.
 
+## Diagnóstico
+
+Se os dados sumirem, **Ajustes → Diagnóstico** mede o que ninguém consegue ver.
+
+A medida que importa é o **contador de aberturas**. Se ele não sobe quando você
+fecha e abre o navegador, o armazenamento está sendo limpo, e não há conserto
+possível dentro do app — a causa é externa:
+
+- **aba anônima** (o navegador apaga tudo ao fechar, por definição);
+- a opção **"limpar dados/cookies ao sair"**, ligada nas configurações;
+- no iPhone, o Safari **descarta dados de sites** que não foram adicionados à
+  tela inicial depois de alguns dias sem uso;
+- o sistema recuperando espaço num aparelho cheio — o caso mais raro, e o único
+  que instalar na tela inicial resolve sozinho.
+
+O painel também mostra se o app está instalado, se o sistema prometeu não
+apagar, quanto espaço há e quando foi a última cópia.
+
 ## Limites conhecidos
 
 - O aparelho guarda cerca de 5 MB no total. Conversas importadas são cortadas

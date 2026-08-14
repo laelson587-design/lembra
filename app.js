@@ -46,6 +46,8 @@ const PADRAO = {
   modelos: MODELOS_PADRAO,
   contatos: {},
   copiaEm: null,     // quando a última cópia de segurança foi tirada
+  aberturas: 0,      // quantas vezes o app abriu: mede se o navegador apaga
+  desde: null,       // data da primeira abertura que sobreviveu
 };
 
 // ---------------------------------------------------------------- estado
@@ -76,6 +78,8 @@ function estruturar(d) {
     modelos: Array.isArray(d.modelos) && d.modelos.length ? d.modelos : MODELOS_PADRAO,
     contatos: d.contatos || {},
     copiaEm: d.copiaEm || null,
+    aberturas: Number(d.aberturas) || 0,
+    desde: d.desde || null,
   };
 }
 
@@ -372,6 +376,9 @@ function pintarDiscagem() {
   const ok = valido(bruto);
 
   const mostrar = (sel, cond) => $(sel).classList.toggle("oculto", !cond);
+
+  // O aviso de "sumiu tudo" só faz sentido com a tela parada e vazia.
+  mostrar("#sumiu", !ok && Object.keys(estado.contatos).length === 0);
 
   if (!ok) {
     chaveAtual = null;
@@ -785,6 +792,106 @@ async function trazerVariosDaAgenda() {
   avisar(partes.join(" · ") || "Nada para trazer.");
 }
 
+// ------------------------------------------------------------- diagnóstico
+
+/**
+ * Mede o que ninguém consegue ver: se o navegador está apagando os dados.
+ *
+ * O truque é o contador de aberturas. Se ele volta a 1 toda vez que o
+ * navegador reinicia, o armazenamento está sendo limpo — e nenhum conserto no
+ * app resolve isso, porque a causa é aba anônima ou a opção de limpar dados ao
+ * sair. Sem essa medida a conversa vira adivinhação.
+ */
+async function levantarDiagnostico() {
+  const dados = {
+    aberturas: estado.aberturas,
+    desde: estado.desde,
+    contatos: Object.keys(estado.contatos).length,
+    instalado: window.matchMedia("(display-mode: standalone)").matches,
+    fixado: null,
+    usado: null,
+    total: null,
+    escreve: false,
+  };
+
+  try {
+    const teste = "lembra.teste";
+    localStorage.setItem(teste, "1");
+    dados.escreve = localStorage.getItem(teste) === "1";
+    localStorage.removeItem(teste);
+  } catch (e) {
+    dados.escreve = false;
+  }
+
+  try {
+    if (navigator.storage && navigator.storage.persisted) {
+      dados.fixado = await navigator.storage.persisted();
+    }
+    if (navigator.storage && navigator.storage.estimate) {
+      const e = await navigator.storage.estimate();
+      dados.usado = e.usage;
+      dados.total = e.quota;
+    }
+  } catch (e) { /* navegador antigo; os campos ficam nulos */ }
+
+  return dados;
+}
+
+function emMega(bytes) {
+  if (!bytes && bytes !== 0) return "?";
+  const mb = bytes / 1048576;
+  return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb.toFixed(1) + " MB";
+}
+
+async function pintarDiagnostico() {
+  const d = await levantarDiagnostico();
+  const topo = $("#diagnostico");
+
+  if (!d.escreve) {
+    topo.className = "veredito pare";
+    topo.innerHTML = `<p class="titulo">O navegador não deixa guardar nada</p>
+      <p class="detalhe">Provavelmente é aba anônima. Feche e abra numa aba normal.</p>`;
+  } else if (d.aberturas <= 1 && d.contatos === 0) {
+    topo.className = "veredito novo";
+    topo.innerHTML = `<p class="titulo">Primeira abertura</p>
+      <p class="detalhe">Feche o navegador, abra de novo e volte aqui: o contador
+      abaixo tem de marcar 2.</p>`;
+  } else if (d.aberturas <= 1) {
+    topo.className = "veredito pare";
+    topo.innerHTML = `<p class="titulo">Os dados estão sendo apagados</p>
+      <p class="detalhe">Há ${d.contatos} ${d.contatos === 1 ? "contato" : "contatos"}
+      aqui, mas o app conta como se fosse a primeira vez que abre. O navegador
+      está limpando tudo ao fechar.</p>`;
+  } else {
+    topo.className = "veredito ok";
+    topo.innerHTML = `<p class="titulo">Os dados estão sobrevivendo</p>
+      <p class="detalhe">O app já abriu ${d.aberturas} vezes e continua lembrando.</p>`;
+  }
+
+  const linha = (nome, valor, classe = "") =>
+    `<div class="item ${classe}"><span class="cresce">
+       <span class="nome">${escapar(nome)}</span>
+       <span class="sub">${escapar(valor)}</span>
+     </span></div>`;
+
+  $("#detalhes-diagnostico").innerHTML = [
+    linha("Aberturas contadas",
+      d.desde ? `${d.aberturas} desde ${dataCurta(d.desde)}` : String(d.aberturas),
+      d.aberturas > 1 ? "ok" : "cuidado"),
+    linha("Contatos guardados", String(d.contatos)),
+    linha("Instalado na tela inicial", d.instalado ? "sim" : "não",
+      d.instalado ? "ok" : "cuidado"),
+    linha("O sistema promete não apagar",
+      d.fixado === null ? "o navegador não informa" : d.fixado ? "sim" : "não",
+      d.fixado ? "ok" : "cuidado"),
+    linha("Espaço usado",
+      d.total ? `${emMega(d.usado)} de ${emMega(d.total)}` : "o navegador não informa"),
+    linha("Última cópia",
+      estado.copiaEm ? `${dataCurta(estado.copiaEm)}, ${haQuanto(estado.copiaEm)}` : "nunca",
+      estado.copiaEm ? "" : "cuidado"),
+  ].join("");
+}
+
 // --------------------------------------------------------- cópia de segurança
 
 function conteudoDaCopia() {
@@ -927,7 +1034,7 @@ function irPara(tela) {
   window.scrollTo(0, 0);
   if (tela === "fila") pintarFila();
   if (tela === "contatos") pintarContatos();
-  if (tela === "ajustes") { pintarModelos(); pintarEstadoCopia(); }
+  if (tela === "ajustes") { pintarModelos(); pintarEstadoCopia(); pintarDiagnostico(); }
 }
 
 // --------------------------------------------------------------- ligações
@@ -1192,6 +1299,12 @@ function pintarTudo() {
 }
 
 async function comecar() {
+  // Contar aberturas é o que revela navegador que apaga tudo ao fechar: se
+  // este número nunca passa de 1, não há conserto possível dentro do app.
+  estado.aberturas = (estado.aberturas || 0) + 1;
+  if (!estado.desde) estado.desde = new Date().toISOString();
+  guardar();
+
   $("#marca-dia").textContent = new Date().toLocaleDateString("pt-BR",
     { weekday: "short", day: "2-digit", month: "short" });
   iniciarCampos();
