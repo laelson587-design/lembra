@@ -1,0 +1,954 @@
+/* Lembra — a memória que o WhatsApp não guarda.
+ *
+ * A ideia inteira cabe numa frase: você já digita o número em algum lugar
+ * antes de mandar mensagem. Se digitar aqui, o app abre a conversa para você
+ * E guarda quem é. Mesmas teclas de sempre, e no dia em que a lista do
+ * trabalho reiniciar, é ele que lembra quem você já queimou.
+ *
+ * Tudo mora no aparelho (localStorage). Nada sobe para servidor nenhum —
+ * decisão de risco, não de preguiça: assim isto é a agenda pessoal de quem
+ * usa, e não a cópia da base de uma empresa.
+ */
+
+"use strict";
+
+const CHAVE = "lembra.v1";
+
+const MODELOS_PADRAO = [
+  {
+    id: "m1",
+    titulo: "Primeiro contato",
+    texto:
+      "{saudacao}, {nome}. Aqui é o {eu}, da {instituicao}. Posso te mandar " +
+      "uma simulação rápida, sem compromisso? Se não tiver interesse é só me " +
+      "dizer que eu não incomodo mais.",
+  },
+  {
+    id: "m2",
+    titulo: "Segunda tentativa",
+    texto:
+      "{nome}, é o {eu} de novo. Só para não te deixar sem retorno: ainda quer " +
+      "que eu veja essa simulação? Se preferir que eu pare, me avisa que eu paro.",
+  },
+  {
+    id: "m3",
+    titulo: "Retorno combinado",
+    texto:
+      "{saudacao}, {nome}. Aqui é o {eu}. Você pediu para eu te procurar hoje. " +
+      "Posso mandar os números?",
+  },
+];
+
+const PADRAO = {
+  versao: 1,
+  eu: { nome: "", instituicao: "" },
+  regua: { um: 15, dois: 45, respondeu: 7 },
+  modelos: MODELOS_PADRAO,
+  contatos: {},
+};
+
+// ---------------------------------------------------------------- estado
+
+let estado = carregar();
+let chaveAtual = null;    // contato em foco na tela de discar
+let chaveFicha = null;    // contato aberto na ficha
+let filtroAtual = "TODOS";
+
+function carregar() {
+  try {
+    const cru = localStorage.getItem(CHAVE);
+    if (!cru) return estruturar(PADRAO);
+    const lido = JSON.parse(cru);
+    return estruturar({ ...PADRAO, ...lido });
+  } catch (e) {
+    console.error("não deu para ler o que estava guardado", e);
+    return estruturar(PADRAO);
+  }
+}
+
+/** Garante que campos novos de versões futuras não venham faltando. */
+function estruturar(d) {
+  return {
+    versao: 1,
+    eu: { nome: "", instituicao: "", ...(d.eu || {}) },
+    regua: { um: 15, dois: 45, respondeu: 7, ...(d.regua || {}) },
+    modelos: Array.isArray(d.modelos) && d.modelos.length ? d.modelos : MODELOS_PADRAO,
+    contatos: d.contatos || {},
+  };
+}
+
+function guardar() {
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify(estado));
+    return true;
+  } catch (e) {
+    // Cota estourada é o único erro realista aqui, e acontece com conversa
+    // colada demais. Avisar é melhor que perder em silêncio.
+    avisar("Não coube mais no aparelho. Exporte uma cópia e apague conversas antigas.");
+    console.error(e);
+    return false;
+  }
+}
+
+// ------------------------------------------------------------- utilidades
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+function soDigitos(s) {
+  return String(s || "").replace(/\D/g, "");
+}
+
+/** Deixa o número no formato DDD + assinante, sem o 55 do país. */
+function normalizar(bruto) {
+  let d = soDigitos(bruto);
+  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+  return d;
+}
+
+/**
+ * A chave de identidade. O nono dígito do celular entrou em 2016 e metade das
+ * listas antigas não tem: 11 98765-4321 e 11 8765-4321 são a mesma pessoa.
+ * Guardar pelos dois jeitos faria o app dizer "número novo" para quem já foi
+ * chamado seis vezes — justamente o erro que ele existe para evitar.
+ */
+function chaveDe(bruto) {
+  const d = normalizar(bruto);
+  if (d.length === 11 && d[2] === "9") return d.slice(0, 2) + d.slice(3);
+  return d;
+}
+
+function valido(bruto) {
+  const d = normalizar(bruto);
+  return d.length === 10 || d.length === 11;
+}
+
+function bonito(bruto) {
+  const d = normalizar(bruto);
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return bruto;
+}
+
+function hoje() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dia(iso) {
+  const d = new Date(iso);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function diasEntre(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function dataCurta(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function dataHora(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) +
+    " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function haQuanto(iso) {
+  const n = diasEntre(dia(iso), hoje());
+  if (n <= 0) return "hoje";
+  if (n === 1) return "ontem";
+  if (n < 30) return `há ${n} dias`;
+  const m = Math.floor(n / 30);
+  return m === 1 ? "há 1 mês" : `há ${m} meses`;
+}
+
+function saudacao() {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+function escapar(s) {
+  return String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+let relogioAviso = null;
+function avisar(texto) {
+  const el = $("#aviso");
+  el.textContent = texto;
+  el.classList.remove("oculto");
+  clearTimeout(relogioAviso);
+  relogioAviso = setTimeout(() => el.classList.add("oculto"), 3200);
+}
+
+// --------------------------------------------------------------- contatos
+
+function achar(bruto) {
+  return estado.contatos[chaveDe(bruto)] || null;
+}
+
+function criar(bruto, nome) {
+  const k = chaveDe(bruto);
+  estado.contatos[k] = {
+    numero: normalizar(bruto),
+    nome: (nome || "").trim(),
+    criadoEm: new Date().toISOString(),
+    status: "ABERTO",
+    voltarEm: null,
+    eventos: [],
+  };
+  return estado.contatos[k];
+}
+
+function registrar(c, tipo, extra = {}) {
+  c.eventos.push({ em: new Date().toISOString(), tipo, ...extra });
+}
+
+/** Quantas mensagens foram mandadas desde a última resposta (ou liberação). */
+function semRespostaSeguidas(c) {
+  let n = 0;
+  for (let i = c.eventos.length - 1; i >= 0; i--) {
+    const t = c.eventos[i].tipo;
+    if (t === "RESPONDEU" || t === "LIBERADO") break;
+    if (t === "ENVIADO") n++;
+  }
+  return n;
+}
+
+function jaRespondeu(c) {
+  return c.eventos.some((e) => e.tipo === "RESPONDEU");
+}
+
+function totalEnviados(c) {
+  return c.eventos.filter((e) => e.tipo === "ENVIADO").length;
+}
+
+function ultimoEnvio(c) {
+  for (let i = c.eventos.length - 1; i >= 0; i--) {
+    if (c.eventos[i].tipo === "ENVIADO") return c.eventos[i].em;
+  }
+  return null;
+}
+
+/** Quantos dias esperar antes de procurar de novo. null = nunca mais. */
+function esperaDe(c) {
+  if (c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE") return null;
+  if (jaRespondeu(c)) return estado.regua.respondeu;
+  const n = semRespostaSeguidas(c);
+  if (n === 0) return 0;
+  if (n === 1) return estado.regua.um;
+  if (n === 2) return estado.regua.dois;
+  return null;   // três tentativas mudas: sai da fila de vez
+}
+
+/** Data a partir da qual pode chamar de novo. null = nunca. */
+function liberadoEm(c) {
+  const espera = esperaDe(c);
+  if (espera === null) return null;
+  const ult = ultimoEnvio(c);
+  if (!ult) return hoje();
+  const d = dia(ult);
+  d.setDate(d.getDate() + espera);
+  return d;
+}
+
+// ------------------------------------------------------------- o veredito
+
+/**
+ * O que o app tem a dizer no instante em que o número é digitado — antes de
+ * mandar qualquer coisa. É a tela inteira do produto.
+ */
+function julgar(c) {
+  if (!c) {
+    return { classe: "novo", titulo: "Número novo", detalhe: "Você nunca falou com esta pessoa." };
+  }
+
+  const enviados = totalEnviados(c);
+  const ult = ultimoEnvio(c);
+  const desde = ult ? `Última em ${dataCurta(ult)}, ${haQuanto(ult)}.` : "";
+
+  if (c.status === "NAO_PERTURBE") {
+    return {
+      classe: "pare",
+      titulo: "Pediu para não receber mais",
+      detalhe: "Não mande. É desse contato que sai denúncia, e denúncia é o que derruba o número.",
+    };
+  }
+  if (c.status === "SEM_INTERESSE") {
+    return { classe: "pare", titulo: "Disse que não tem interesse", detalhe: desde };
+  }
+  if (c.status === "CLIENTE") {
+    return { classe: "ok", titulo: "Já é seu cliente", detalhe: desde };
+  }
+
+  if (c.voltarEm && dia(c.voltarEm) <= hoje()) {
+    return {
+      classe: "ok",
+      titulo: "Retorno combinado",
+      detalhe: `Você marcou para procurar em ${dataCurta(c.voltarEm)}. É hoje ou já passou.`,
+    };
+  }
+
+  if (jaRespondeu(c)) {
+    return {
+      classe: "ok",
+      titulo: "Já respondeu antes",
+      detalhe: `${enviados} ${enviados === 1 ? "mensagem" : "mensagens"}. ${desde}`,
+    };
+  }
+
+  const mudas = semRespostaSeguidas(c);
+  if (mudas >= 3) {
+    return {
+      classe: "pare",
+      titulo: `${mudas} tentativas, nenhuma resposta`,
+      detalhe: "Quem não respondeu três vezes não responde na quarta. Insistir aqui é o que queima seu número.",
+    };
+  }
+  if (mudas > 0) {
+    const lib = liberadoEm(c);
+    const falta = lib ? diasEntre(hoje(), lib) : 0;
+    return {
+      classe: "cuidado",
+      titulo: `Já chamado ${mudas} ${mudas === 1 ? "vez" : "vezes"}, sem resposta`,
+      detalhe: falta > 0
+        ? `${desde} Melhor só voltar em ${dataCurta(lib.toISOString())} — faltam ${falta} dias.`
+        : `${desde} Já pode chamar de novo.`,
+    };
+  }
+
+  return { classe: "novo", titulo: "Cadastrado, ainda não chamado", detalhe: "" };
+}
+
+// ------------------------------------------------------- tela de discagem
+
+function pintarDiscagem() {
+  const bruto = $("#numero").value;
+  const ok = valido(bruto);
+
+  const mostrar = (sel, cond) => $(sel).classList.toggle("oculto", !cond);
+
+  if (!ok) {
+    chaveAtual = null;
+    ["#veredito", "#campo-nome", "#campo-modelo", "#previa", "#abrir",
+      "#desfecho", "#ver-ficha"].forEach((s) => mostrar(s, false));
+    return;
+  }
+
+  const c = achar(bruto);
+  const k = chaveDe(bruto);
+
+  // Trocou de pessoa? O nome tem de trocar junto. Sem isto, digitar o número
+  // da Maria logo depois do José deixava "Sr. José" no campo — e a mensagem
+  // saía com o nome errado, que é pior do que sair sem nome nenhum.
+  if (k !== chaveAtual) $("#nome").value = c ? c.nome || "" : "";
+  chaveAtual = k;
+
+  const v = julgar(c);
+  const el = $("#veredito");
+  el.className = "veredito " + v.classe;
+  el.innerHTML =
+    `<p class="titulo">${escapar(v.titulo)}</p>` +
+    (v.detalhe ? `<p class="detalhe">${escapar(v.detalhe)}</p>` : "");
+
+  mostrar("#veredito", true);
+  mostrar("#campo-nome", true);
+  mostrar("#campo-modelo", true);
+  mostrar("#previa", true);
+  mostrar("#abrir", true);
+  mostrar("#ver-ficha", !!c);
+  mostrar("#desfecho", !!c && !!ultimoEnvio(c));
+
+  $("#previa").textContent = montarTexto();
+}
+
+function montarTexto() {
+  const m = estado.modelos.find((x) => x.id === $("#modelo").value) || estado.modelos[0];
+  if (!m) return "";
+  const nome = ($("#nome").value || "").trim();
+  return m.texto
+    .replaceAll("{saudacao}", saudacao())
+    .replaceAll("{nome}", nome || "tudo bem")
+    .replaceAll("{eu}", estado.eu.nome || "…")
+    .replaceAll("{instituicao}", estado.eu.instituicao || "…")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function abrirConversa() {
+  const bruto = $("#numero").value;
+  if (!valido(bruto)) return avisar("Número incompleto.");
+
+  let c = achar(bruto);
+  const jaEra = !!c;
+  if (!c) c = criar(bruto, $("#nome").value);
+
+  if (c.status === "NAO_PERTURBE") {
+    if (!confirm("Esta pessoa pediu para não receber mais mensagens.\n\nMandar assim mesmo?")) return;
+  }
+
+  const nome = ($("#nome").value || "").trim();
+  if (nome) c.nome = nome;
+
+  const modeloId = $("#modelo").value;
+  const texto = montarTexto();
+  registrar(c, "ENVIADO", { modeloId, texto });
+  c.voltarEm = null;   // o retorno combinado foi cumprido ao chamar
+  guardar();
+
+  const destino = "https://wa.me/55" + c.numero + "?text=" + encodeURIComponent(texto);
+  window.open(destino, "_blank", "noopener");
+
+  pintarDiscagem();
+  pintarFila();
+  if (!jaEra) avisar("Contato guardado.");
+}
+
+function marcarResultado(tipo) {
+  if (!chaveAtual) return;
+  const c = estado.contatos[chaveAtual];
+  if (!c) return;
+  aplicarResultado(c, tipo);
+  guardar();
+  pintarDiscagem();
+  pintarFila();
+  avisar(recadoDe(tipo));
+}
+
+function aplicarResultado(c, tipo) {
+  registrar(c, tipo);
+  if (tipo === "NAO_PERTURBE") { c.status = "NAO_PERTURBE"; c.voltarEm = null; }
+  else if (tipo === "SEM_INTERESSE") { c.status = "SEM_INTERESSE"; c.voltarEm = null; }
+  else if (tipo === "CLIENTE") { c.status = "CLIENTE"; }
+  else if (tipo === "LIBERADO") { c.status = "ABERTO"; }
+}
+
+function recadoDe(tipo) {
+  return {
+    RESPONDEU: "Anotado: respondeu.",
+    SEM_RESPOSTA: "Anotado: sem resposta.",
+    SEM_INTERESSE: "Anotado. Sai da fila.",
+    NAO_PERTURBE: "Anotado. Não aparece mais na fila.",
+    CLIENTE: "Anotado: virou cliente.",
+    LIBERADO: "Liberado para a fila de novo.",
+  }[tipo] || "Anotado.";
+}
+
+// ---------------------------------------------------------- fila do dia
+
+function montarFila() {
+  const h = hoje();
+  const linhas = [];
+
+  for (const [k, c] of Object.entries(estado.contatos)) {
+    if (c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE") continue;
+
+    if (c.voltarEm && dia(c.voltarEm) <= h) {
+      linhas.push({ k, c, ordem: 0, motivo: `retorno combinado para ${dataCurta(c.voltarEm)}` });
+      continue;
+    }
+
+    const lib = liberadoEm(c);
+    if (!lib || lib > h) continue;
+
+    const ult = ultimoEnvio(c);
+    if (!ult) {
+      linhas.push({ k, c, ordem: 2, motivo: "cadastrado e nunca chamado" });
+    } else {
+      const n = semRespostaSeguidas(c);
+      linhas.push({
+        k, c, ordem: 1,
+        motivo: jaRespondeu(c)
+          ? `respondeu antes · falado ${haQuanto(ult)}`
+          : `${n} ${n === 1 ? "tentativa" : "tentativas"} · falado ${haQuanto(ult)}`,
+        peso: dia(ult).getTime(),
+      });
+    }
+  }
+
+  linhas.sort((a, b) => (a.ordem - b.ordem) || ((a.peso || 0) - (b.peso || 0)));
+  return linhas;
+}
+
+function pintarFila() {
+  const linhas = montarFila();
+  const lista = $("#fila-lista");
+
+  $("#fila-contagem").textContent = linhas.length
+    ? `${linhas.length} para falar` : "vazia";
+
+  const badge = $("#badge-fila");
+  badge.textContent = linhas.length > 99 ? "99+" : String(linhas.length);
+  badge.classList.toggle("oculto", linhas.length === 0);
+
+  const total = Object.keys(estado.contatos).length;
+  $("#fila-resumo").textContent = total
+    ? `De ${total} ${total === 1 ? "contato guardado" : "contatos guardados"}, ` +
+      `${linhas.length} ${linhas.length === 1 ? "está" : "estão"} no prazo de hoje. ` +
+      `O resto é para deixar quieto.`
+    : "";
+
+  if (!linhas.length) {
+    lista.innerHTML = `<p class="vazio">Ninguém para chamar hoje.<br>
+      Isso é bom: cada mensagem que você não manda é chip que dura mais.</p>`;
+    return;
+  }
+
+  lista.innerHTML = linhas.map(({ k, c, ordem, motivo }) => {
+    const classe = ordem === 0 ? "ok" : ordem === 2 ? "novo" : "cuidado";
+    return `<button class="item ${classe}" data-fila="${escapar(k)}">
+      <span class="cresce">
+        <span class="nome">${escapar(c.nome || bonito(c.numero))}</span>
+        <span class="sub">${escapar(motivo)}</span>
+      </span>
+      <span class="seta">›</span>
+    </button>`;
+  }).join("");
+}
+
+// ----------------------------------------------------------- contatos
+
+function pintarContatos() {
+  const busca = soDigitos($("#busca").value)
+    || ($("#busca").value || "").trim().toLowerCase();
+  const digitos = /^\d+$/.test(busca);
+
+  let itens = Object.entries(estado.contatos).map(([k, c]) => ({ k, c }));
+
+  itens = itens.filter(({ c }) => {
+    if (filtroAtual === "RESPONDEU" && !jaRespondeu(c)) return false;
+    if (filtroAtual === "MUDOS" && (jaRespondeu(c) || totalEnviados(c) === 0)) return false;
+    if (filtroAtual === "NAO_PERTURBE" && c.status !== "NAO_PERTURBE") return false;
+    if (!busca) return true;
+    return digitos
+      ? c.numero.includes(busca)
+      : (c.nome || "").toLowerCase().includes(busca);
+  });
+
+  itens.sort((a, b) => {
+    const ua = ultimoEnvio(a.c) || a.c.criadoEm;
+    const ub = ultimoEnvio(b.c) || b.c.criadoEm;
+    return new Date(ub) - new Date(ua);
+  });
+
+  const total = Object.keys(estado.contatos).length;
+  $("#contatos-contagem").textContent = total
+    ? (itens.length === total ? `${total}` : `${itens.length} de ${total}`)
+    : "nenhum";
+
+  const lista = $("#contatos-lista");
+  if (!itens.length) {
+    lista.innerHTML = `<p class="vazio">${total
+      ? "Nada com esse filtro."
+      : "Ainda não há ninguém aqui.<br>Digite um número na aba Discar e a memória começa."}</p>`;
+    return;
+  }
+
+  lista.innerHTML = itens.map(({ k, c }) => {
+    const v = julgar(c);
+    const n = totalEnviados(c);
+    return `<button class="item ${v.classe}" data-contato="${escapar(k)}">
+      <span class="cresce">
+        <span class="nome">${escapar(c.nome || bonito(c.numero))}</span>
+        <span class="sub">${escapar(bonito(c.numero))} · ${n} ${n === 1 ? "mensagem" : "mensagens"}${
+          jaRespondeu(c) ? " · respondeu" : ""}</span>
+      </span>
+      <span class="seta">›</span>
+    </button>`;
+  }).join("");
+}
+
+// --------------------------------------------------------------- ficha
+
+const ROTULO_EVENTO = {
+  ENVIADO: "Mensagem enviada",
+  RESPONDEU: "Respondeu",
+  SEM_RESPOSTA: "Sem resposta",
+  SEM_INTERESSE: "Disse que não tem interesse",
+  NAO_PERTURBE: "Pediu para não receber mais",
+  CLIENTE: "Virou cliente",
+  LIBERADO: "Liberado para a fila",
+  RETORNO: "Retorno marcado",
+  NOTA: "Anotação",
+  CONVERSA: "Conversa guardada",
+  IMPORTADO: "Histórico importado do WhatsApp",
+};
+
+function abrirFicha(k) {
+  const c = estado.contatos[k];
+  if (!c) return;
+  chaveFicha = k;
+
+  $("#ficha-nome").textContent = c.nome || "Sem nome";
+  $("#ficha-numero").textContent = bonito(c.numero);
+  $("#ficha-editar-nome").value = c.nome || "";
+  $("#ficha-nota").value = "";
+  $("#ficha-conversa").value = "";
+
+  const v = julgar(c);
+  $("#ficha-situacao").className = "veredito " + v.classe;
+  $("#ficha-situacao").innerHTML =
+    `<p class="titulo">${escapar(v.titulo)}</p>` +
+    (v.detalhe ? `<p class="detalhe">${escapar(v.detalhe)}</p>` : "");
+
+  const eventos = [...c.eventos].reverse();
+  $("#ficha-historico").innerHTML = eventos.length
+    ? eventos.map((e) => {
+        const cor = e.tipo === "RESPONDEU" || e.tipo === "CLIENTE" ? "bom"
+          : (e.tipo === "NAO_PERTURBE" || e.tipo === "SEM_INTERESSE") ? "ruim" : "";
+        return `<div class="evento ${cor}">
+          <div class="quando">${escapar(dataHora(e.em))}</div>
+          <div class="oque">${escapar(ROTULO_EVENTO[e.tipo] || e.tipo)}</div>
+          ${e.texto ? `<div class="texto">${escapar(e.texto)}</div>` : ""}
+        </div>`;
+      }).join("")
+    : `<p class="vazio">Sem histórico ainda.</p>`;
+
+  $("#ficha").classList.remove("oculto");
+  document.body.style.overflow = "hidden";
+}
+
+function fecharFicha() {
+  $("#ficha").classList.add("oculto");
+  document.body.style.overflow = "";
+  chaveFicha = null;
+  pintarDiscagem();
+  pintarFila();
+  pintarContatos();
+}
+
+/**
+ * Converte a exportação do WhatsApp num texto limpo.
+ * Android:  11/08/2026 14:32 - Fulano: mensagem
+ * iPhone:  [11/08/2026 14:32:10] Fulano: mensagem
+ * Só interessa reconhecer o começo de linha para contar mensagens e tirar o
+ * lixo invisível que os dois formatos deixam.
+ */
+function lerExportacao(cru) {
+  const limpo = cru.replace(/[\u200E\u200F\u202A-\u202E]/g, "");
+  const linhas = limpo.split(/\r?\n/);
+  const inicio = /^\[?\d{1,2}\/\d{1,2}\/\d{2,4}[,]?\s+\d{1,2}:\d{2}/;
+  const mensagens = linhas.filter((l) => inicio.test(l)).length;
+  return { texto: limpo.trim(), mensagens };
+}
+
+// ------------------------------------------------------------- modelos
+
+/** Taxa de resposta de um modelo: respondeu logo depois de ter sido usado. */
+function desempenho(modeloId) {
+  let usos = 0, respostas = 0;
+  for (const c of Object.values(estado.contatos)) {
+    c.eventos.forEach((e, i) => {
+      if (e.tipo !== "ENVIADO" || e.modeloId !== modeloId) return;
+      usos++;
+      // vale como resposta se veio antes do próximo envio
+      for (let j = i + 1; j < c.eventos.length; j++) {
+        if (c.eventos[j].tipo === "ENVIADO") break;
+        if (c.eventos[j].tipo === "RESPONDEU") { respostas++; break; }
+      }
+    });
+  }
+  return { usos, respostas, taxa: usos ? Math.round((respostas / usos) * 100) : null };
+}
+
+function pintarModelos() {
+  const sel = $("#modelo");
+  const escolhido = sel.value;
+  sel.innerHTML = estado.modelos
+    .map((m) => `<option value="${escapar(m.id)}">${escapar(m.titulo)}</option>`).join("");
+  if (escolhido && estado.modelos.some((m) => m.id === escolhido)) sel.value = escolhido;
+
+  $("#modelos-lista").innerHTML = estado.modelos.map((m) => {
+    const d = desempenho(m.id);
+    const marca = d.taxa === null
+      ? "ainda sem uso"
+      : `${d.taxa}% de resposta · ${d.usos} ${d.usos === 1 ? "envio" : "envios"}`;
+    return `<button class="item" data-modelo="${escapar(m.id)}">
+      <span class="cresce">
+        <span class="nome">${escapar(m.titulo)}</span>
+        <span class="sub">${escapar(marca)}</span>
+      </span>
+      <span class="seta">›</span>
+    </button>`;
+  }).join("");
+}
+
+function editarModelo(id) {
+  const m = estado.modelos.find((x) => x.id === id);
+  if (!m) return;
+  const titulo = prompt("Nome do modelo:", m.titulo);
+  if (titulo === null) return;
+  const texto = prompt(
+    "Texto da mensagem.\n\nUse {nome}, {eu}, {instituicao} e {saudacao}.\n" +
+    "Deixe em branco para apagar o modelo.", m.texto);
+  if (texto === null) return;
+
+  if (!texto.trim()) {
+    if (estado.modelos.length === 1) return avisar("Precisa sobrar pelo menos um modelo.");
+    estado.modelos = estado.modelos.filter((x) => x.id !== id);
+  } else {
+    m.titulo = titulo.trim() || m.titulo;
+    m.texto = texto.trim();
+  }
+  guardar();
+  pintarModelos();
+  pintarDiscagem();
+}
+
+// ------------------------------------------------------------- navegação
+
+function irPara(tela) {
+  $$(".tela").forEach((s) => s.classList.toggle("ativa", s.id === "tela-" + tela));
+  $$(".aba").forEach((b) => b.classList.toggle("ativa", b.dataset.tela === tela));
+  window.scrollTo(0, 0);
+  if (tela === "fila") pintarFila();
+  if (tela === "contatos") pintarContatos();
+  if (tela === "ajustes") pintarModelos();
+}
+
+// --------------------------------------------------------------- ligações
+
+function ligar() {
+  // -- discagem
+  $("#numero").addEventListener("input", pintarDiscagem);
+  $("#nome").addEventListener("input", () => { $("#previa").textContent = montarTexto(); });
+  $("#modelo").addEventListener("change", () => { $("#previa").textContent = montarTexto(); });
+  $("#abrir").addEventListener("click", abrirConversa);
+  $("#ver-ficha").addEventListener("click", () => chaveAtual && abrirFicha(chaveAtual));
+
+  $$("#desfecho .resultado").forEach((b) =>
+    b.addEventListener("click", () => marcarResultado(b.dataset.r)));
+
+  $("#marcar-retorno").addEventListener("click", () => {
+    const quando = $("#voltar-em").value;
+    if (!quando) return avisar("Escolha a data.");
+    if (!chaveAtual) return;
+    const c = estado.contatos[chaveAtual];
+    if (!c) return;
+    c.voltarEm = quando;
+    c.status = c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE" ? "ABERTO" : c.status;
+    registrar(c, "RETORNO", { texto: "Voltar em " + dataCurta(quando) });
+    guardar();
+    $("#voltar-em").value = "";
+    pintarDiscagem();
+    pintarFila();
+    avisar("Retorno marcado para " + dataCurta(quando) + ".");
+  });
+
+  // -- abas
+  $$(".aba").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.tela)));
+
+  // -- fila e contatos (delegação: as listas são redesenhadas o tempo todo)
+  $("#fila-lista").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-fila]");
+    if (b) abrirFicha(b.dataset.fila);
+  });
+  $("#contatos-lista").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-contato]");
+    if (b) abrirFicha(b.dataset.contato);
+  });
+  $("#modelos-lista").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-modelo]");
+    if (b) editarModelo(b.dataset.modelo);
+  });
+
+  $("#busca").addEventListener("input", pintarContatos);
+  $("#filtros").addEventListener("click", (ev) => {
+    const b = ev.target.closest(".chip");
+    if (!b) return;
+    filtroAtual = b.dataset.f;
+    $$("#filtros .chip").forEach((x) => x.classList.toggle("ativo", x === b));
+    pintarContatos();
+  });
+
+  // -- ficha
+  $("#fechar-ficha").addEventListener("click", fecharFicha);
+
+  $$("#ficha .resultado").forEach((b) =>
+    b.addEventListener("click", () => {
+      const c = estado.contatos[chaveFicha];
+      if (!c) return;
+      aplicarResultado(c, b.dataset.fr);
+      guardar();
+      abrirFicha(chaveFicha);
+      avisar(recadoDe(b.dataset.fr));
+    }));
+
+  $("#ficha-editar-nome").addEventListener("change", () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    c.nome = $("#ficha-editar-nome").value.trim();
+    guardar();
+    $("#ficha-nome").textContent = c.nome || "Sem nome";
+  });
+
+  $("#salvar-nota").addEventListener("click", () => {
+    const c = estado.contatos[chaveFicha];
+    const t = $("#ficha-nota").value.trim();
+    if (!c || !t) return avisar("Escreva alguma coisa primeiro.");
+    registrar(c, "NOTA", { texto: t });
+    guardar();
+    abrirFicha(chaveFicha);
+    avisar("Anotado.");
+  });
+
+  $("#salvar-conversa").addEventListener("click", () => {
+    const c = estado.contatos[chaveFicha];
+    const t = $("#ficha-conversa").value.trim();
+    if (!c || !t) return avisar("Cole a conversa primeiro.");
+    registrar(c, "CONVERSA", { texto: t });
+    if (guardar()) { abrirFicha(chaveFicha); avisar("Conversa guardada."); }
+  });
+
+  $("#ficha-arquivo").addEventListener("change", (ev) => {
+    const arquivo = ev.target.files && ev.target.files[0];
+    if (!arquivo) return;
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      const { texto, mensagens } = lerExportacao(String(leitor.result || ""));
+      if (!texto) return avisar("O arquivo veio vazio.");
+
+      const LIMITE = 200000;   // o aparelho guarda uns 5 MB no total
+      const cortado = texto.length > LIMITE;
+      registrar(c, "IMPORTADO", {
+        texto: cortado ? texto.slice(-LIMITE) : texto,
+      });
+      if (guardar()) {
+        abrirFicha(chaveFicha);
+        avisar(cortado
+          ? `Importado: ${mensagens} mensagens (guardei as mais recentes).`
+          : `Importado: ${mensagens} mensagens.`);
+      }
+    };
+    leitor.readAsText(arquivo);
+    ev.target.value = "";
+  });
+
+  $("#ficha-apagar").addEventListener("click", () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    if (!confirm(`Apagar ${c.nome || bonito(c.numero)} e todo o histórico?\n\nNão tem como voltar atrás.`)) return;
+    delete estado.contatos[chaveFicha];
+    guardar();
+    fecharFicha();
+    avisar("Contato apagado.");
+  });
+
+  // -- ajustes
+  const salvarEu = () => {
+    estado.eu.nome = $("#eu-nome").value.trim();
+    estado.eu.instituicao = $("#eu-instituicao").value.trim();
+    guardar();
+    $("#previa").textContent = montarTexto();
+  };
+  $("#eu-nome").addEventListener("change", salvarEu);
+  $("#eu-instituicao").addEventListener("change", salvarEu);
+
+  const salvarRegua = () => {
+    estado.regua.um = Math.max(1, Number($("#regua-1").value) || 15);
+    estado.regua.dois = Math.max(1, Number($("#regua-2").value) || 45);
+    estado.regua.respondeu = Math.max(1, Number($("#regua-r").value) || 7);
+    guardar();
+    pintarFila();
+    avisar("Régua atualizada.");
+  };
+  ["#regua-1", "#regua-2", "#regua-r"].forEach((s) =>
+    $(s).addEventListener("change", salvarRegua));
+
+  $("#novo-modelo").addEventListener("click", () => {
+    const id = "m" + Date.now().toString(36);
+    estado.modelos.push({ id, titulo: "Novo modelo", texto: "{saudacao}, {nome}. Aqui é o {eu}." });
+    guardar();
+    pintarModelos();
+    editarModelo(id);
+  });
+
+  $("#exportar").addEventListener("click", () => {
+    const conteudo = JSON.stringify(estado, null, 2);
+    const url = URL.createObjectURL(new Blob([conteudo], { type: "application/json" }));
+    const a = document.createElement("a");
+    const d = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `lembra-${d}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    avisar("Cópia gerada. Guarde num lugar seguro.");
+  });
+
+  $("#importar").addEventListener("change", (ev) => {
+    const arquivo = ev.target.files && ev.target.files[0];
+    if (!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      try {
+        const lido = estruturar(JSON.parse(String(leitor.result)));
+        const quantos = Object.keys(lido.contatos).length;
+        if (!confirm(`Restaurar ${quantos} contatos?\n\nO que está aqui agora será substituído.`)) return;
+        estado = lido;
+        guardar();
+        iniciarCampos();
+        pintarTudo();
+        avisar("Cópia restaurada.");
+      } catch (e) {
+        avisar("Esse arquivo não é uma cópia do Lembra.");
+      }
+    };
+    leitor.readAsText(arquivo);
+    ev.target.value = "";
+  });
+
+  $("#apagar").addEventListener("click", () => {
+    if (!confirm("Apagar TODOS os contatos, histórico e ajustes?\n\nNão tem como voltar atrás.")) return;
+    if (!confirm("Tem certeza mesmo? Exporte uma cópia antes se tiver dúvida.")) return;
+    localStorage.removeItem(CHAVE);
+    estado = estruturar(PADRAO);
+    iniciarCampos();
+    pintarTudo();
+    avisar("Tudo apagado.");
+  });
+}
+
+// ----------------------------------------------------------------- início
+
+function iniciarCampos() {
+  $("#eu-nome").value = estado.eu.nome;
+  $("#eu-instituicao").value = estado.eu.instituicao;
+  $("#regua-1").value = estado.regua.um;
+  $("#regua-2").value = estado.regua.dois;
+  $("#regua-r").value = estado.regua.respondeu;
+  $("#voltar-em").min = new Date().toISOString().slice(0, 10);
+}
+
+function pintarTudo() {
+  pintarModelos();
+  pintarDiscagem();
+  pintarFila();
+  pintarContatos();
+}
+
+function comecar() {
+  $("#marca-dia").textContent = new Date().toLocaleDateString("pt-BR",
+    { weekday: "short", day: "2-digit", month: "short" });
+  iniciarCampos();
+  ligar();
+  pintarTudo();
+
+  if (!estado.eu.nome) {
+    avisar("Comece pelos Ajustes: ponha seu nome na mensagem.");
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
+comecar();

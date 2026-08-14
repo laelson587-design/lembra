@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lembra</title>
+<meta name="description" content="A memória dos seus contatos: quem você já chamou, quem nunca respondeu e quem pediu para parar.">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<!-- ======================= DISCAR ======================= -->
+<section id="tela-discar" class="tela ativa">
+  <header class="cabecalho">
+    <h1>Lembra</h1>
+    <span id="marca-dia" class="etiqueta"></span>
+  </header>
+
+  <div class="corpo">
+    <label class="campo">
+      <span class="rotulo">Número</span>
+      <input id="numero" type="tel" inputmode="numeric" placeholder="11 98765-4321"
+             autocomplete="off" enterkeyhint="done">
+    </label>
+
+    <!-- O veredito. É o coração do app: aparece ANTES de mandar, não depois. -->
+    <div id="veredito" class="veredito oculto"></div>
+
+    <label class="campo oculto" id="campo-nome">
+      <span class="rotulo">Nome de quem atende</span>
+      <input id="nome" type="text" placeholder="Sr. José" autocomplete="off">
+    </label>
+
+    <label class="campo oculto" id="campo-modelo">
+      <span class="rotulo">Mensagem</span>
+      <select id="modelo"></select>
+    </label>
+
+    <div id="previa" class="previa oculto"></div>
+
+    <button id="abrir" class="principal oculto">Abrir conversa no WhatsApp</button>
+
+    <!-- Só aparece depois de abrir a conversa: o que aconteceu. -->
+    <div id="desfecho" class="desfecho oculto">
+      <p class="dica">E aí, o que aconteceu?</p>
+      <div class="botoes">
+        <button class="resultado bom"    data-r="RESPONDEU">Respondeu</button>
+        <button class="resultado neutro" data-r="SEM_RESPOSTA">Sem resposta</button>
+        <button class="resultado ruim"   data-r="SEM_INTERESSE">Não tem interesse</button>
+        <button class="resultado pare"   data-r="NAO_PERTURBE">Pediu para parar</button>
+      </div>
+      <div class="linha-retorno">
+        <input id="voltar-em" type="date">
+        <button id="marcar-retorno" class="secundario">Retornar nesta data</button>
+      </div>
+    </div>
+
+    <button id="ver-ficha" class="secundario oculto">Ver a ficha completa</button>
+  </div>
+</section>
+
+<!-- ======================= FILA DO DIA ======================= -->
+<section id="tela-fila" class="tela">
+  <header class="cabecalho">
+    <h1>Hoje</h1>
+    <span id="fila-contagem" class="etiqueta"></span>
+  </header>
+  <div class="corpo">
+    <p class="dica" id="fila-resumo"></p>
+    <div id="fila-lista" class="lista"></div>
+  </div>
+</section>
+
+<!-- ======================= CONTATOS ======================= -->
+<section id="tela-contatos" class="tela">
+  <header class="cabecalho">
+    <h1>Contatos</h1>
+    <span id="contatos-contagem" class="etiqueta"></span>
+  </header>
+  <div class="corpo">
+    <label class="campo">
+      <input id="busca" type="search" placeholder="Buscar por nome ou número" autocomplete="off">
+    </label>
+    <div class="filtros" id="filtros">
+      <button class="chip ativo" data-f="TODOS">Todos</button>
+      <button class="chip" data-f="RESPONDEU">Responderam</button>
+      <button class="chip" data-f="MUDOS">Nunca responderam</button>
+      <button class="chip" data-f="NAO_PERTURBE">Não perturbe</button>
+    </div>
+    <div id="contatos-lista" class="lista"></div>
+  </div>
+</section>
+
+<!-- ======================= AJUSTES ======================= -->
+<section id="tela-ajustes" class="tela">
+  <header class="cabecalho">
+    <h1>Ajustes</h1>
+  </header>
+  <div class="corpo">
+
+    <h2>Quem está falando</h2>
+    <label class="campo">
+      <span class="rotulo">Seu nome</span>
+      <input id="eu-nome" type="text" placeholder="Laelson" autocomplete="off">
+    </label>
+    <label class="campo">
+      <span class="rotulo">Onde você trabalha</span>
+      <input id="eu-instituicao" type="text" placeholder="Crefisa" autocomplete="off">
+    </label>
+    <p class="dica">Entram na mensagem no lugar de <code>{eu}</code> e <code>{instituicao}</code>.
+       Mensagem sem nome de gente quase não recebe resposta.</p>
+
+    <h2>Régua de contato</h2>
+    <label class="campo">
+      <span class="rotulo">Depois de 1 tentativa sem resposta, esperar</span>
+      <span class="linha-num"><input id="regua-1" type="number" min="1" max="365"><i>dias</i></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Depois de 2 tentativas sem resposta, esperar</span>
+      <span class="linha-num"><input id="regua-2" type="number" min="1" max="365"><i>dias</i></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Quem respondeu, procurar de novo em</span>
+      <span class="linha-num"><input id="regua-r" type="number" min="1" max="365"><i>dias</i></span>
+    </label>
+    <p class="dica">Na terceira tentativa sem resposta o contato sai da fila de vez.
+       Quem não respondeu três vezes não responde na quarta — denuncia.</p>
+
+    <h2>Modelos de mensagem</h2>
+    <div id="modelos-lista" class="lista"></div>
+    <button id="novo-modelo" class="secundario">Criar modelo</button>
+    <p class="dica">A taxa de resposta de cada modelo aparece na lista. É o número que
+       mais vale aqui dentro: troque o texto que responde pouco.</p>
+
+    <h2>Cópia de segurança</h2>
+    <p class="dica">Tudo fica guardado neste aparelho, e em nenhum outro lugar.
+       Se o celular sumir, some junto. Exporte de vez em quando.</p>
+    <button id="exportar" class="secundario">Exportar cópia</button>
+    <label class="secundario arquivo">
+      Restaurar cópia
+      <input id="importar" type="file" accept="application/json,.json" hidden>
+    </label>
+
+    <h2 class="perigo">Zona de risco</h2>
+    <button id="apagar" class="perigoso">Apagar tudo</button>
+
+    <p class="rodape">Lembra · os dados nunca saem deste aparelho.</p>
+  </div>
+</section>
+
+<!-- ======================= FICHA (sobreposição) ======================= -->
+<div id="ficha" class="ficha oculto">
+  <div class="ficha-topo">
+    <button id="fechar-ficha" class="icone" aria-label="Voltar">←</button>
+    <div>
+      <h2 id="ficha-nome"></h2>
+      <p id="ficha-numero" class="mono"></p>
+    </div>
+  </div>
+  <div class="corpo">
+    <div id="ficha-situacao"></div>
+
+    <div class="botoes">
+      <button class="resultado bom"    data-fr="RESPONDEU">Respondeu</button>
+      <button class="resultado neutro" data-fr="SEM_RESPOSTA">Sem resposta</button>
+      <button class="resultado ruim"   data-fr="SEM_INTERESSE">Sem interesse</button>
+      <button class="resultado pare"   data-fr="NAO_PERTURBE">Não perturbe</button>
+      <button class="resultado bom"    data-fr="CLIENTE">Virou cliente</button>
+      <button class="resultado neutro" data-fr="LIBERAR">Liberar de novo</button>
+    </div>
+
+    <label class="campo">
+      <span class="rotulo">Nome</span>
+      <input id="ficha-editar-nome" type="text" autocomplete="off">
+    </label>
+
+    <h3>Anotar</h3>
+    <textarea id="ficha-nota" rows="3" placeholder="O que ficou combinado…"></textarea>
+    <button id="salvar-nota" class="secundario">Salvar anotação</button>
+
+    <h3>Guardar a conversa</h3>
+    <p class="dica">No WhatsApp, segure uma mensagem, marque as que quiser e toque em
+       copiar. Cole aqui e fica guardado mesmo que o número caia.</p>
+    <textarea id="ficha-conversa" rows="4" placeholder="Cole aqui as mensagens copiadas…"></textarea>
+    <button id="salvar-conversa" class="secundario">Guardar conversa</button>
+
+    <p class="dica">Ou traga o histórico inteiro: no WhatsApp, abra a conversa →
+       menu → <b>Exportar conversa</b> → <b>Sem mídia</b>, e escolha o arquivo aqui.</p>
+    <label class="secundario arquivo">
+      Importar exportação do WhatsApp
+      <input id="ficha-arquivo" type="file" accept="text/plain,.txt" hidden>
+    </label>
+
+    <h3>Histórico</h3>
+    <div id="ficha-historico" class="linha-tempo"></div>
+
+    <button id="ficha-apagar" class="perigoso">Apagar este contato</button>
+  </div>
+</div>
+
+<!-- ======================= NAVEGAÇÃO ======================= -->
+<nav class="abas">
+  <button class="aba ativa" data-tela="discar"><span>⌨</span>Discar</button>
+  <button class="aba" data-tela="fila"><span>📋</span>Hoje<i id="badge-fila" class="badge oculto"></i></button>
+  <button class="aba" data-tela="contatos"><span>👥</span>Contatos</button>
+  <button class="aba" data-tela="ajustes"><span>⚙</span>Ajustes</button>
+</nav>
+
+<div id="aviso" class="aviso oculto"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

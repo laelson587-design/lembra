@@ -1,0 +1,17 @@
+{
+  "name": "Lembra",
+  "short_name": "Lembra",
+  "description": "A memória dos seus contatos: quem você já chamou, quem nunca respondeu e quem pediu para parar.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f3f6",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
