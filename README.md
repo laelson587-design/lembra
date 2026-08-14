@@ -75,6 +75,7 @@ de cada um**, e a cópia de segurança.
 
 | Situação | Quando procurar de novo |
 | --- | --- |
+| **Retorno marcado** | **na data combinada, e não antes** |
 | Nunca contatado | agora |
 | Respondeu alguma vez | 7 dias |
 | 1 tentativa sem resposta | 15 dias |
@@ -85,6 +86,13 @@ de cada um**, e a cópia de segurança.
 
 Os prazos se mudam em Ajustes. O corte na terceira tentativa não: quem não
 respondeu três vezes não responde na quarta — denuncia.
+
+**O retorno marcado passa na frente de tudo.** Você escolhe a data no
+calendário, na tela de Discar ou na ficha do contato, e ele some da fila até
+o dia chegar — quando volta, no topo. Marcar retorno também tira alguém de
+"sem interesse", porque marcar data é o contrário de descartar. Dá para
+agendar quem você ainda nem chamou: às vezes o combinado é só "me procura
+depois do dia 10".
 
 ## Guardar conversas
 

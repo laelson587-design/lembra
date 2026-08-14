@@ -56,10 +56,17 @@
         <button class="resultado ruim"   data-r="SEM_INTERESSE">Não tem interesse</button>
         <button class="resultado pare"   data-r="NAO_PERTURBE">Pediu para parar</button>
       </div>
+    </div>
+
+    <!-- Agendar não depende de já ter mandado: às vezes o combinado é só
+         "me procura depois do dia 10". Por isso fica fora do desfecho. -->
+    <div id="agendar" class="desfecho oculto">
+      <p class="dica" id="agendar-atual">Combinou de procurar depois?</p>
       <div class="linha-retorno">
         <input id="voltar-em" type="date">
-        <button id="marcar-retorno" class="secundario">Retornar nesta data</button>
+        <button id="marcar-retorno" class="secundario">Marcar retorno</button>
       </div>
+      <button id="tirar-retorno" class="secundario oculto">Tirar o retorno marcado</button>
     </div>
 
     <button id="ver-ficha" class="secundario oculto">Ver a ficha completa</button>
@@ -185,6 +192,14 @@
       <span class="rotulo">Nome</span>
       <input id="ficha-editar-nome" type="text" autocomplete="off">
     </label>
+
+    <h3>Retorno</h3>
+    <p class="dica" id="ficha-retorno-atual"></p>
+    <div class="linha-retorno">
+      <input id="ficha-voltar-em" type="date">
+      <button id="ficha-marcar-retorno" class="secundario">Marcar retorno</button>
+    </div>
+    <button id="ficha-tirar-retorno" class="secundario oculto">Tirar o retorno marcado</button>
 
     <h3>Anotar</h3>
     <textarea id="ficha-nota" rows="3" placeholder="O que ficou combinado…"></textarea>

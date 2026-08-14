@@ -154,8 +154,19 @@ function hoje() {
   return d;
 }
 
-function dia(iso) {
-  const d = new Date(iso);
+/**
+ * O dia, no fuso de quem usa.
+ *
+ * Cuidado que custou um bug: `new Date("2026-09-01")` é lido como meia-noite
+ * em UTC, o que no Brasil ainda é dia 31 de agosto às 21h. O campo de data do
+ * navegador devolve exatamente esse formato, então um retorno marcado para o
+ * dia 1º aparecia como 31 e caía na fila um dia antes. Data sem hora tem de
+ * ser montada peça por peça, no fuso local.
+ */
+function dia(valor) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor));
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  const d = new Date(valor);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -164,9 +175,9 @@ function diasEntre(a, b) {
   return Math.round((b - a) / 86400000);
 }
 
-function dataCurta(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+function dataCurta(valor) {
+  return dia(valor).toLocaleDateString("pt-BR",
+    { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
 function dataHora(iso) {
@@ -305,11 +316,21 @@ function julgar(c) {
     return { classe: "ok", titulo: "Já é seu cliente", detalhe: desde };
   }
 
-  if (c.voltarEm && dia(c.voltarEm) <= hoje()) {
+  if (c.voltarEm) {
+    const faltam = diasEntre(hoje(), dia(c.voltarEm));
+    if (faltam <= 0) {
+      return {
+        classe: "ok",
+        titulo: "Retorno combinado",
+        detalhe: `Você marcou para procurar em ${dataCurta(c.voltarEm)}. ${
+          faltam === 0 ? "É hoje." : `Já passou ${-faltam === 1 ? "1 dia" : -faltam + " dias"}.`}`,
+      };
+    }
     return {
       classe: "ok",
-      titulo: "Retorno combinado",
-      detalhe: `Você marcou para procurar em ${dataCurta(c.voltarEm)}. É hoje ou já passou.`,
+      titulo: "Retorno marcado",
+      detalhe: `Combinado para ${dataCurta(c.voltarEm)} — ${
+        faltam === 1 ? "amanhã" : `faltam ${faltam} dias`}. Antes disso, deixe quieto.`,
     };
   }
 
@@ -355,7 +376,7 @@ function pintarDiscagem() {
   if (!ok) {
     chaveAtual = null;
     ["#veredito", "#campo-nome", "#campo-modelo", "#previa", "#abrir",
-      "#desfecho", "#ver-ficha"].forEach((s) => mostrar(s, false));
+      "#desfecho", "#agendar", "#ver-ficha"].forEach((s) => mostrar(s, false));
     return;
   }
 
@@ -382,6 +403,8 @@ function pintarDiscagem() {
   mostrar("#abrir", true);
   mostrar("#ver-ficha", !!c);
   mostrar("#desfecho", !!c && !!ultimoEnvio(c));
+  mostrar("#agendar", true);
+  pintarRetorno(c, { campo: "#voltar-em", limpar: "#tirar-retorno", texto: "#agendar-atual" });
 
   $("#previa").textContent = montarTexto();
 }
@@ -417,7 +440,10 @@ function abrirConversa() {
   const modeloId = $("#modelo").value;
   const texto = montarTexto();
   registrar(c, "ENVIADO", { modeloId, texto });
-  c.voltarEm = null;   // o retorno combinado foi cumprido ao chamar
+  // Chamou no dia combinado? O compromisso está cumprido. Mas um retorno
+  // marcado para daqui a um mês continua de pé — mandar hoje por outro
+  // motivo não desmarca o que ficou combinado para lá na frente.
+  if (c.voltarEm && diasEntre(hoje(), dia(c.voltarEm)) <= 0) c.voltarEm = null;
   guardar();
 
   const destino = "https://wa.me/55" + c.numero + "?text=" + encodeURIComponent(texto);
@@ -445,6 +471,31 @@ function aplicarResultado(c, tipo) {
   else if (tipo === "SEM_INTERESSE") { c.status = "SEM_INTERESSE"; c.voltarEm = null; }
   else if (tipo === "CLIENTE") { c.status = "CLIENTE"; }
   else if (tipo === "LIBERADO") { c.status = "ABERTO"; }
+}
+
+/** Marca a data de voltar a procurar. Vale na discagem e na ficha. */
+function agendarRetorno(c, quando) {
+  c.voltarEm = quando;
+  // quem tinha sido descartado volta a valer: marcar retorno é o contrário
+  // de "não me procure mais", e sem isto ele nunca reapareceria na fila
+  if (c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE") c.status = "ABERTO";
+  registrar(c, "RETORNO", { texto: "Voltar em " + dataCurta(quando) });
+}
+
+function desmarcarRetorno(c) {
+  if (!c.voltarEm) return;
+  registrar(c, "RETORNO", { texto: "Retorno de " + dataCurta(c.voltarEm) + " desmarcado" });
+  c.voltarEm = null;
+}
+
+/** Desenha a área de agendar, na discagem ou na ficha. */
+function pintarRetorno(c, alvos) {
+  const marcado = c && c.voltarEm;
+  $(alvos.campo).value = marcado || "";
+  $(alvos.limpar).classList.toggle("oculto", !marcado);
+  $(alvos.texto).textContent = marcado
+    ? `Marcado para ${dataCurta(c.voltarEm)}. Ele aparece na aba Hoje quando chegar o dia.`
+    : "Combinou de procurar depois? Marque a data e ele volta sozinho na aba Hoje.";
 }
 
 function recadoDe(tipo) {
@@ -608,6 +659,12 @@ function abrirFicha(k) {
   $("#ficha-editar-nome").value = c.nome || "";
   $("#ficha-nota").value = "";
   $("#ficha-conversa").value = "";
+  $("#ficha-voltar-em").min = new Date().toISOString().slice(0, 10);
+  pintarRetorno(c, {
+    campo: "#ficha-voltar-em",
+    limpar: "#ficha-tirar-retorno",
+    texto: "#ficha-retorno-atual",
+  });
 
   const v = julgar(c);
   $("#ficha-situacao").className = "veredito " + v.classe;
@@ -888,18 +945,31 @@ function ligar() {
 
   $("#marcar-retorno").addEventListener("click", () => {
     const quando = $("#voltar-em").value;
-    if (!quando) return avisar("Escolha a data.");
-    if (!chaveAtual) return;
-    const c = estado.contatos[chaveAtual];
-    if (!c) return;
-    c.voltarEm = quando;
-    c.status = c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE" ? "ABERTO" : c.status;
-    registrar(c, "RETORNO", { texto: "Voltar em " + dataCurta(quando) });
+    if (!quando) return avisar("Escolha a data no calendário.");
+    const bruto = $("#numero").value;
+    if (!valido(bruto)) return avisar("Número incompleto.");
+
+    // Dá para agendar alguém que ainda não foi chamado — às vezes o combinado
+    // é só "me procura depois do dia 10", sem mensagem nenhuma antes.
+    let c = achar(bruto);
+    if (!c) c = criar(bruto, $("#nome").value);
+    else if ($("#nome").value.trim()) c.nome = $("#nome").value.trim();
+
+    agendarRetorno(c, quando);
     guardar();
-    $("#voltar-em").value = "";
     pintarDiscagem();
     pintarFila();
     avisar("Retorno marcado para " + dataCurta(quando) + ".");
+  });
+
+  $("#tirar-retorno").addEventListener("click", () => {
+    const c = chaveAtual && estado.contatos[chaveAtual];
+    if (!c) return;
+    desmarcarRetorno(c);
+    guardar();
+    pintarDiscagem();
+    pintarFila();
+    avisar("Retorno desmarcado.");
   });
 
   // -- abas
@@ -947,6 +1017,28 @@ function ligar() {
     c.nome = $("#ficha-editar-nome").value.trim();
     guardar();
     $("#ficha-nome").textContent = c.nome || "Sem nome";
+  });
+
+  $("#ficha-marcar-retorno").addEventListener("click", () => {
+    const c = estado.contatos[chaveFicha];
+    const quando = $("#ficha-voltar-em").value;
+    if (!c) return;
+    if (!quando) return avisar("Escolha a data no calendário.");
+    agendarRetorno(c, quando);
+    guardar();
+    abrirFicha(chaveFicha);
+    pintarFila();
+    avisar("Retorno marcado para " + dataCurta(quando) + ".");
+  });
+
+  $("#ficha-tirar-retorno").addEventListener("click", () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    desmarcarRetorno(c);
+    guardar();
+    abrirFicha(chaveFicha);
+    pintarFila();
+    avisar("Retorno desmarcado.");
   });
 
   $("#salvar-nota").addEventListener("click", () => {
