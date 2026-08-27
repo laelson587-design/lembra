@@ -979,6 +979,23 @@ function abrirFicha(k) {
   document.body.style.overflow = "hidden";
 }
 
+/**
+ * Leva a pessoa da ficha para a tela de discagem, já preenchida. Não manda
+ * nada: só põe o número no lugar onde o veredito aparece e a mensagem se
+ * monta. Um toque a mais, de propósito — é o toque em que dá para desistir.
+ */
+function falarCom(k) {
+  const c = estado.contatos[k];
+  if (!c) return;
+  fecharFicha();
+  irPara("discar");
+
+  const n = $("#numero");
+  n.value = c.numero;
+  n.dispatchEvent(new Event("input", { bubbles: true }));
+  window.scrollTo(0, 0);
+}
+
 function fecharFicha() {
   $("#ficha").classList.add("oculto");
   document.body.style.overflow = "";
@@ -1876,6 +1893,7 @@ function ligar() {
 
   // -- ficha
   $("#fechar-ficha").addEventListener("click", fecharFicha);
+  $("#ficha-falar").addEventListener("click", () => chaveFicha && falarCom(chaveFicha));
 
   $$("#ficha .resultado").forEach((b) =>
     b.addEventListener("click", () => {

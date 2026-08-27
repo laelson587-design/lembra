@@ -69,7 +69,9 @@ nomes costumam sobrar poucas dezenas. Mandar menos é o que faz o chip durar.
 com filtros de quem respondeu, quem nunca respondeu e quem pediu para parar.
 
 **Ficha** — histórico completo, anotações, a conversa guardada e os dados do
-benefício.
+benefício. No alto dela, **Falar com esta pessoa** leva para a discagem já
+preenchida: é o caminho de volta da aba Hoje, que sem ele apontava para uma
+pessoa sem deixar você falar com ela.
 
 **Ajustes** — seu nome, a régua, os modelos de mensagem, as peças do montador
 com **taxa de resposta de cada uma**, e a cópia de segurança.

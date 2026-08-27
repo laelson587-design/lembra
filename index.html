@@ -326,6 +326,13 @@
   <div class="corpo">
     <div id="ficha-situacao"></div>
 
+    <!-- Sem isto a aba Hoje era um beco: ela diz com quem falar, você toca na
+         pessoa, lê a ficha — e não tinha como falar sem voltar e digitar o
+         número de novo. O botão leva para a discagem já preenchida, em vez de
+         mandar daqui: é lá que mora o veredito e a escolha da mensagem, e
+         pular isso seria mandar às cegas. -->
+    <button id="ficha-falar" class="principal">Falar com esta pessoa</button>
+
     <div class="botoes">
       <button class="resultado bom"    data-fr="RESPONDEU">Respondeu</button>
       <button class="resultado neutro" data-fr="SEM_RESPOSTA">Sem resposta</button>
