@@ -9,7 +9,7 @@
  * Suba a VERSAO quando quiser forçar a limpeza imediata de todo mundo.
  */
 
-const VERSAO = "lembra-v7";
+const VERSAO = "lembra-v8";
 
 const CASCA = [
   "./",

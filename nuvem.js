@@ -271,7 +271,6 @@ function mesclarEstados(local, remoto) {
     eu: dono.eu,
     regua: dono.regua,
     modelos: dono.modelos,
-    pecas: dono.pecas || local.pecas || remoto.pecas,
     ajustadoEm: dono.ajustadoEm || null,
     contatos,
     copiaEm: [local.copiaEm, remoto.copiaEm].filter(Boolean).sort().pop() || null,

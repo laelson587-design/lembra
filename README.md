@@ -73,56 +73,8 @@ benefício. No alto dela, **Falar com esta pessoa** leva para a discagem já
 preenchida: é o caminho de volta da aba Hoje, que sem ele apontava para uma
 pessoa sem deixar você falar com ela.
 
-**Ajustes** — seu nome, a régua, os modelos de mensagem, as peças do montador
-com **taxa de resposta de cada uma**, e a cópia de segurança.
-
-## O montador de mensagem
-
-Escrever a mesma mensagem oitenta vezes por dia é como se perde o jeito de
-falar. Em vez de escolher um texto pronto, dá para tocar em duas peças e a
-mensagem se monta:
-
-**Sobre o cliente** — recebe benefício · já tem empréstimo em outro banco ·
-nunca pegou · reclamou dos juros · veio por indicação · tem despesa para
-resolver
-**O que você pede** — posso simular? · posso ligar? · quanto dá para pegar ·
-qual o melhor horário
-
-> Bom dia, Sr. José. Aqui é o Laelson, da Financeira. Se o senhor já tem
-> empréstimo em outro banco, dá para comparar as condições lado a lado. Posso
-> fazer uma simulação rápida, sem compromisso? Se não tiver interesse é só me
-> dizer que eu não incomodo mais.
-
-Nada disso está no código: as peças são dado no aparelho, e **quem escreve é
-quem usa** — Ajustes → Peças da mensagem. Dá para trocar as palavras, criar
-peça nova e apagar as que não servem. Vale para as partes fixas também
-(abertura, apresentação e a frase que oferece o não).
-
-### A variação não é enfeite
-
-Cada peça guarda **várias formas de dizer a mesma coisa**, e o app escolhe uma
-pela pessoa: a mesma sempre para o mesmo contato, diferente entre contatos.
-Cinquenta mensagens byte a byte idênticas em sequência é, sozinho, sinal de
-disparo em massa — é assim que se reconhece robô. Variar é defesa do número.
-
-### O conferidor
-
-Abaixo da prévia, antes de mandar, no mesmo espírito do veredito:
-
-> ✓ curta · com o nome · faz uma pergunta · oferece saída
-
-E acusa o que derruba número: link no primeiro contato (o que mais vira
-denúncia), palavra gritada em maiúscula, emoji demais, mensagem longa, e texto
-**sem pergunta** — sem pergunta quase ninguém responde, e conversa sem resposta
-é o que marca o número como frio.
-
-### O que isso faz pela medição
-
-A taxa de resposta deixa de ser do texto inteiro e passa a ser **de cada
-gancho e de cada pedido**, com o número aparecendo no próprio botão na hora de
-escolher. É a diferença entre saber que "a mensagem 2 responde mais" e saber
-que *falar em comparar com outro banco* responde mais do que *oferecer
-simulação*.
+**Ajustes** — seu nome, a régua, os modelos de mensagem com **taxa de resposta
+de cada um**, e a cópia de segurança.
 
 ## Benefício
 
@@ -323,8 +275,8 @@ Aparelho vazio não pergunta: juntar com nada é restaurar.
 Juntar reaproveita a mesclagem escrita para a conta que ficou dormindo, e
 funciona sem servidor nenhum pelo mesmo motivo: **o histórico é só
 acrescentado**, então unir dois lados é unir listas e tirar repetições, sem
-escolher vencedor. Situação e retorno saem dos eventos; nome, benefício, régua,
-modelos e peças resolvem por quem mexeu por último.
+escolher vencedor. Situação e retorno saem dos eventos; nome, benefício, régua
+e modelos resolvem por quem mexeu por último.
 
 ## Diagnóstico
 
