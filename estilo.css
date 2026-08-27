@@ -245,6 +245,18 @@ button { font: inherit; cursor: pointer; }
 }
 .chip.ativo { background: var(--marca); border-color: var(--marca); color: #fff; }
 
+.montador { margin-bottom: 14px; }
+.montador .rotulo { margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip i { font-style: normal; font-size: 12px; opacity: 0.75; }
+
+.conferidor {
+  margin: -8px 0 14px; padding: 10px 14px;
+  font-size: 13px; border-radius: var(--raio);
+}
+.conferidor.bom   { color: var(--bom);     background: var(--bom-fraco); }
+.conferidor.aviso { color: var(--atencao); background: var(--atencao-fraco); }
+
 .vazio { padding: 32px 16px; text-align: center; color: var(--tenue); }
 
 /* ---------- ficha ---------- */

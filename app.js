@@ -54,11 +54,139 @@ const TIPOS_BENEFICIO = [
   "Outro",
 ];
 
+/* As peças do montador.
+ *
+ * Cada peça guarda VÁRIAS formas de dizer a mesma coisa, e o app escolhe uma
+ * pela pessoa. Não é enfeite: cinquenta mensagens byte a byte idênticas em
+ * sequência é, sozinho, sinal de disparo em massa — e é o que faz o número
+ * cair. Variar é defesa, não estilo.
+ *
+ * Tudo isto é só o ponto de partida. As peças viram dado no aparelho na
+ * primeira abertura, e daí em diante quem escreve é quem usa: Ajustes → Peças
+ * da mensagem. O tratamento aqui é "o senhor" porque quem recebe costuma ser
+ * aposentado; quem falar com gente mais nova troca lá dentro.
+ */
+const PECAS_PADRAO = {
+  abertura: [
+    "{saudacao}, {nome}.",
+    "{saudacao}, {nome}. Espero que esteja bem.",
+    "{saudacao}, {nome}. Desculpe aparecer assim.",
+  ],
+  apresentacao: [
+    "Aqui é o {eu}, da {instituicao}.",
+    "Meu nome é {eu}, falo pela {instituicao}.",
+    "É o {eu}, da {instituicao}.",
+  ],
+  saida: [
+    "Se não tiver interesse é só me dizer que eu não incomodo mais.",
+    "Se não for o caso, me avisa que eu não te procuro de novo.",
+    "Se preferir que eu não mande mais nada, é só falar.",
+  ],
+  ganchos: [
+    {
+      id: "g1",
+      titulo: "Recebe benefício",
+      textos: [
+        "Trabalho com crédito para quem recebe benefício.",
+        "Atendo quem recebe benefício, e é por isso que estou te procurando.",
+      ],
+    },
+    {
+      id: "g2",
+      titulo: "Já tem empréstimo em outro banco",
+      textos: [
+        "Se o senhor já tem empréstimo em outro banco, dá para comparar as condições lado a lado.",
+        "Quem já tem empréstimo em outro lugar às vezes acha condição melhor comparando.",
+      ],
+    },
+    {
+      id: "g3",
+      titulo: "Nunca pegou empréstimo",
+      textos: [
+        "Se nunca usou esse tipo de crédito, eu explico como funciona antes de qualquer decisão.",
+        "Não precisa decidir nada agora: primeiro eu explico, depois o senhor pensa.",
+      ],
+    },
+    {
+      id: "g4",
+      titulo: "Reclamou dos juros",
+      textos: [
+        "O senhor comentou que o juro estava pesado — vale olhar os números com calma.",
+        "Sobre o que o senhor falou do juro: dá para ver isso com conta na mão.",
+      ],
+    },
+    {
+      id: "g5",
+      titulo: "Veio por indicação",
+      textos: [
+        "Peguei seu contato por indicação.",
+        "Um conhecido seu falou de mim e passou o seu contato.",
+      ],
+    },
+    {
+      id: "g6",
+      titulo: "Tem despesa para resolver",
+      textos: [
+        "Sei que às vezes aparece uma despesa que não dá para esperar.",
+        "Quando aparece uma conta fora do previsto, é bom já saber quais são as opções.",
+      ],
+    },
+  ],
+  pedidos: [
+    {
+      id: "p1",
+      titulo: "Posso simular?",
+      textos: [
+        "Posso fazer uma simulação rápida, sem compromisso?",
+        "Quer que eu faça uma simulação, só para o senhor ver os números?",
+      ],
+    },
+    {
+      id: "p2",
+      titulo: "Posso ligar?",
+      textos: [
+        "Posso te ligar cinco minutos para explicar?",
+        "O senhor prefere que eu ligue? É rápido.",
+      ],
+    },
+    {
+      id: "p3",
+      titulo: "Quanto dá para pegar",
+      textos: [
+        "Quer saber quanto o senhor consegue?",
+        "Posso ver quanto está disponível para o senhor?",
+      ],
+    },
+    {
+      id: "p4",
+      titulo: "Qual o melhor horário",
+      textos: [
+        "Qual o melhor horário para eu falar com o senhor?",
+        "Que horas costuma ser melhor para o senhor conversar?",
+      ],
+    },
+  ],
+};
+
+/** Estado antigo não tem peças; grupo apagado por inteiro volta ao padrão. */
+function mesclarPecas(p) {
+  const usar = (v, padrao) => (Array.isArray(v) && v.length ? v : padrao);
+  const guardado = p || {};
+  return {
+    abertura: usar(guardado.abertura, PECAS_PADRAO.abertura),
+    apresentacao: usar(guardado.apresentacao, PECAS_PADRAO.apresentacao),
+    saida: usar(guardado.saida, PECAS_PADRAO.saida),
+    ganchos: Array.isArray(guardado.ganchos) ? guardado.ganchos : PECAS_PADRAO.ganchos,
+    pedidos: Array.isArray(guardado.pedidos) ? guardado.pedidos : PECAS_PADRAO.pedidos,
+  };
+}
+
 const PADRAO = {
   versao: 1,
   eu: { nome: "", instituicao: "" },
   regua: { um: 15, dois: 45, respondeu: 7 },
   modelos: MODELOS_PADRAO,
+  pecas: PECAS_PADRAO,
   contatos: {},
   copiaEm: null,     // quando a última cópia de segurança foi tirada
   aberturas: 0,      // quantas vezes o app abriu: mede se o navegador apaga
@@ -92,6 +220,7 @@ function estruturar(d) {
     eu: { nome: "", instituicao: "", ...(d.eu || {}) },
     regua: { um: 15, dois: 45, respondeu: 7, ...(d.regua || {}) },
     modelos: Array.isArray(d.modelos) && d.modelos.length ? d.modelos : MODELOS_PADRAO,
+    pecas: mesclarPecas(d.pecas),
     contatos: d.contatos || {},
     copiaEm: d.copiaEm || null,
     aberturas: Number(d.aberturas) || 0,
@@ -475,9 +604,9 @@ function pintarDiscagem() {
 
   if (!ok) {
     chaveAtual = null;
-    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#previa",
-      "#abrir", "#so-guardar", "#desfecho", "#agendar", "#ver-ficha"]
-      .forEach((s) => mostrar(s, false));
+    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#montador",
+      "#previa", "#conferidor", "#abrir", "#so-guardar", "#desfecho", "#agendar",
+      "#ver-ficha"].forEach((s) => mostrar(s, false));
     return;
   }
 
@@ -509,6 +638,7 @@ function pintarDiscagem() {
   mostrar("#campo-nome", true);
   mostrar("#campo-beneficio", true);
   mostrar("#campo-modelo", true);
+  mostrar("#montador", usandoMontador());
   mostrar("#previa", true);
   mostrar("#abrir", true);
   mostrar("#so-guardar", true);
@@ -517,20 +647,17 @@ function pintarDiscagem() {
   mostrar("#agendar", true);
   pintarRetorno(c, { campo: "#voltar-em", limpar: "#tirar-retorno", texto: "#agendar-atual" });
 
-  $("#previa").textContent = montarTexto();
+  atualizarPrevia();
 }
 
 function montarTexto() {
+  const nome = ($("#nome").value || "").trim();
+  if (usandoMontador()) {
+    return textoDoMontador(chaveAtual || $("#numero").value || "", nome);
+  }
   const m = estado.modelos.find((x) => x.id === $("#modelo").value) || estado.modelos[0];
   if (!m) return "";
-  const nome = ($("#nome").value || "").trim();
-  return m.texto
-    .replaceAll("{saudacao}", saudacao())
-    .replaceAll("{nome}", nome || "tudo bem")
-    .replaceAll("{eu}", estado.eu.nome || "…")
-    .replaceAll("{instituicao}", estado.eu.instituicao || "…")
-    .replace(/\s+/g, " ")
-    .trim();
+  return preencher(m.texto, nome);
 }
 
 /** Nome e benefício digitados na tela de discar, aplicados ao contato. */
@@ -580,7 +707,9 @@ function abrirConversa() {
 
   const modeloId = $("#modelo").value;
   const texto = montarTexto();
-  registrar(c, "ENVIADO", { modeloId, texto });
+  registrar(c, "ENVIADO", usandoMontador()
+    ? { modeloId, texto, ganchoId: ganchoAtual, pedidoId: pedidoAtual }
+    : { modeloId, texto });
   // Chamou no dia combinado? O compromisso está cumprido. Mas um retorno
   // marcado para daqui a um mês continua de pé — mandar hoje por outro
   // motivo não desmarca o que ficou combinado para lá na frente.
@@ -975,7 +1104,7 @@ async function escolherDaAgenda() {
   n.dispatchEvent(new Event("input", { bubbles: true }));
   if (c.nome) {
     $("#nome").value = c.nome;
-    $("#previa").textContent = montarTexto();
+    atualizarPrevia();
   }
 }
 
@@ -1355,9 +1484,12 @@ function desempenho(modeloId) {
 function pintarModelos() {
   const sel = $("#modelo");
   const escolhido = sel.value;
-  sel.innerHTML = estado.modelos
-    .map((m) => `<option value="${escapar(m.id)}">${escapar(m.titulo)}</option>`).join("");
-  if (escolhido && estado.modelos.some((m) => m.id === escolhido)) sel.value = escolhido;
+  sel.innerHTML = `<option value="${MONTAR}">Montar com as peças</option>` +
+    estado.modelos
+      .map((m) => `<option value="${escapar(m.id)}">${escapar(m.titulo)}</option>`).join("");
+  if (escolhido === MONTAR || (escolhido && estado.modelos.some((m) => m.id === escolhido))) {
+    sel.value = escolhido;
+  }
 
   $("#modelos-lista").innerHTML = estado.modelos.map((m) => {
     const d = desempenho(m.id);
@@ -1396,6 +1528,252 @@ function editarModelo(id) {
   pintarDiscagem();
 }
 
+// ------------------------------------------------------- montador de mensagem
+
+/* Qual peça está escolhida agora. Fica fora do contato de propósito: quem
+   trabalha uma leva de gente parecida escolhe o gancho uma vez e segue. */
+let ganchoAtual = null;
+let pedidoAtual = null;
+
+const MONTAR = "__montar";   // o valor da opção "Montar mensagem" na lista
+
+/** Número estável a partir de um texto, para escolher variante sem sorteio. */
+function semente(texto) {
+  let h = 0;
+  const s = String(texto || "");
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/**
+ * Escolhe uma das formas de dizer a mesma coisa. A escolha é sempre a mesma
+ * para a mesma pessoa — assim ninguém recebe duas mensagens em vozes
+ * diferentes — e diferente entre pessoas, que é o ponto.
+ */
+function variante(lista, chave) {
+  const l = (lista || []).filter((t) => String(t || "").trim());
+  if (!l.length) return "";
+  return l[semente(chave) % l.length];
+}
+
+/** Troca os marcadores e limpa a pontuação que sobra quando falta o nome. */
+function preencher(texto, nome) {
+  return String(texto || "")
+    .replaceAll("{saudacao}", saudacao())
+    .replaceAll("{nome}", String(nome || "").trim())
+    .replaceAll("{eu}", estado.eu.nome || "…")
+    .replaceAll("{instituicao}", estado.eu.instituicao || "…")
+    .replace(/\s+/g, " ")
+    .replace(/,\s*,/g, ",")
+    .replace(/,\s*([.?!])/g, "$1")
+    .replace(/\s+([.,?!])/g, "$1")
+    .trim();
+}
+
+function acharPeca(grupo, id) {
+  return (estado.pecas[grupo] || []).find((p) => p.id === id) || null;
+}
+
+/** Monta a mensagem a partir das peças escolhidas. */
+function textoDoMontador(chave, nome) {
+  const p = estado.pecas;
+  const gancho = acharPeca("ganchos", ganchoAtual);
+  const pedido = acharPeca("pedidos", pedidoAtual);
+
+  const partes = [
+    variante(p.abertura, chave + "a"),
+    variante(p.apresentacao, chave + "b"),
+    gancho ? variante(gancho.textos, chave + gancho.id) : "",
+    pedido ? variante(pedido.textos, chave + pedido.id) : "",
+    variante(p.saida, chave + "z"),
+  ];
+  return preencher(partes.filter(Boolean).join(" "), nome);
+}
+
+/**
+ * O conferidor. Mesma ideia do veredito: dizer ANTES de mandar. Cada item aqui
+ * corresponde a um jeito conhecido de queimar número — link no primeiro
+ * contato e texto gritado são os que mais viram denúncia, e mensagem sem
+ * pergunta simplesmente não recebe resposta, o que deixa o número frio.
+ */
+function conferirMensagem(texto, nome) {
+  const bons = [], ruins = [];
+  const t = String(texto || "");
+
+  if (t.length > 320) ruins.push("longa demais");
+  else bons.push(t.length <= 220 ? "curta" : "no tamanho");
+
+  if (/https?:\/\/|www\.|\.com\b|\.br\b/i.test(t)) {
+    ruins.push("tem link — no primeiro contato é o que mais vira denúncia");
+  }
+  if (/[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{4,}/.test(t)) ruins.push("tem palavra gritada em maiúscula");
+
+  const emojis = (t.match(/\p{Extended_Pictographic}/gu) || []).length;
+  if (emojis > 2) ruins.push("emoji demais");
+
+  if (String(nome || "").trim()) bons.push("com o nome");
+  else ruins.push("sem o nome de quem atende");
+
+  if (t.includes("?")) bons.push("faz uma pergunta");
+  else ruins.push("não faz pergunta — sem pergunta quase ninguém responde");
+
+  if (/não incomodo|me dizer|me avisa|não tiver interesse|é só falar|não te procuro/i.test(t)) {
+    bons.push("oferece saída");
+  } else {
+    ruins.push("não oferece saída");
+  }
+
+  return { bons, ruins };
+}
+
+/** Quantos envios e quantas respostas uma peça tem. Igual a desempenho(), mas por peça. */
+function desempenhoPeca(campo, id) {
+  let usos = 0, respostas = 0;
+  for (const c of Object.values(estado.contatos)) {
+    c.eventos.forEach((e, i) => {
+      if (e.tipo !== "ENVIADO" || e[campo] !== id) return;
+      usos++;
+      for (let j = i + 1; j < c.eventos.length; j++) {
+        if (c.eventos[j].tipo === "ENVIADO") break;
+        if (c.eventos[j].tipo === "RESPONDEU") { respostas++; break; }
+      }
+    });
+  }
+  return { usos, respostas, taxa: usos ? Math.round((respostas / usos) * 100) : null };
+}
+
+function usandoMontador() {
+  return $("#modelo").value === MONTAR;
+}
+
+/** Desenha as fileiras de peças, cada uma com a própria taxa de resposta. */
+function pintarMontador() {
+  const fileira = (sel, grupo, campo, escolhido) => {
+    $(sel).innerHTML = (estado.pecas[grupo] || []).map((p) => {
+      const d = desempenhoPeca(campo, p.id);
+      const marca = d.taxa === null ? "" : ` <i>${d.taxa}%</i>`;
+      return `<button class="chip${p.id === escolhido ? " ativo" : ""}" data-peca="${escapar(grupo)}" data-id="${escapar(p.id)}">${escapar(p.titulo)}${marca}</button>`;
+    }).join("");
+  };
+  fileira("#ganchos", "ganchos", "ganchoId", ganchoAtual);
+  fileira("#pedidos", "pedidos", "pedidoId", pedidoAtual);
+}
+
+/** A prévia e o conferidor andam juntos: o texto e o que ele tem de errado. */
+function atualizarPrevia() {
+  const nome = $("#nome").value;
+  const texto = montarTexto();
+  $("#previa").textContent = texto;
+
+  const el = $("#conferidor");
+  if (!texto) { el.classList.add("oculto"); return; }
+
+  const { bons, ruins } = conferirMensagem(texto, nome);
+  el.classList.remove("oculto");
+  el.className = "conferidor " + (ruins.length ? "aviso" : "bom");
+  el.textContent = ruins.length
+    ? "⚠ " + ruins.join(" · ")
+    : "✓ " + bons.join(" · ");
+}
+
+// ------------------------------------------------------- peças, nos ajustes
+
+function pintarPecas() {
+  const lista = (sel, grupo, campo) => {
+    $(sel).innerHTML = (estado.pecas[grupo] || []).map((p) => {
+      const d = desempenhoPeca(campo, p.id);
+      const marca = d.taxa === null
+        ? `${p.textos.length} ${p.textos.length === 1 ? "forma de dizer" : "formas de dizer"}`
+        : `${d.taxa}% de resposta · ${d.usos} ${d.usos === 1 ? "envio" : "envios"}`;
+      return `<button class="item" data-peca="${escapar(grupo)}" data-id="${escapar(p.id)}">
+        <span class="cresce">
+          <span class="nome">${escapar(p.titulo)}</span>
+          <span class="sub">${escapar(marca)}</span>
+        </span>
+        <span class="seta">›</span>
+      </button>`;
+    }).join("") || `<p class="vazio">Nenhuma peça aqui.</p>`;
+  };
+  lista("#ganchos-lista", "ganchos", "ganchoId");
+  lista("#pedidos-lista", "pedidos", "pedidoId");
+
+  const FIXAS = [
+    ["abertura", "Abertura", "Como a mensagem começa"],
+    ["apresentacao", "Apresentação", "Como você se apresenta"],
+    ["saida", "Saída", "A frase que oferece o não"],
+  ];
+  $("#fixas-lista").innerHTML = FIXAS.map(([g, titulo, dica]) => {
+    const n = (estado.pecas[g] || []).length;
+    return `<button class="item" data-fixa="${g}">
+      <span class="cresce">
+        <span class="nome">${escapar(titulo)}</span>
+        <span class="sub">${escapar(dica)} · ${n} ${n === 1 ? "forma" : "formas"}</span>
+      </span>
+      <span class="seta">›</span>
+    </button>`;
+  }).join("");
+}
+
+const AJUDA_FORMAS =
+  "Uma forma de dizer por linha. O app escolhe uma delas por pessoa, para não " +
+  "mandar cinquenta mensagens idênticas seguidas.\n\n" +
+  "Pode usar {nome}, {eu}, {instituicao} e {saudacao}.";
+
+function editarPeca(grupo, id) {
+  const p = acharPeca(grupo, id);
+  if (!p) return;
+  const titulo = prompt("Nome da peça (é o que aparece no botão):", p.titulo);
+  if (titulo === null) return;
+  const textos = prompt(AJUDA_FORMAS + "\n\nDeixe em branco para apagar a peça.",
+    p.textos.join("\n"));
+  if (textos === null) return;
+
+  const linhas = textos.split("\n").map((t) => t.trim()).filter(Boolean);
+  if (!linhas.length) {
+    estado.pecas[grupo] = estado.pecas[grupo].filter((x) => x.id !== id);
+    if (ganchoAtual === id) ganchoAtual = null;
+    if (pedidoAtual === id) pedidoAtual = null;
+  } else {
+    p.titulo = titulo.trim() || p.titulo;
+    p.textos = linhas;
+  }
+  guardar();
+  pintarPecas();
+  pintarMontador();
+  atualizarPrevia();
+}
+
+function editarFixa(grupo) {
+  const nomes = { abertura: "Abertura", apresentacao: "Apresentação", saida: "Saída" };
+  const atual = (estado.pecas[grupo] || []).join("\n");
+  const texto = prompt(nomes[grupo] + "\n\n" + AJUDA_FORMAS, atual);
+  if (texto === null) return;
+  const linhas = texto.split("\n").map((t) => t.trim()).filter(Boolean);
+  if (!linhas.length) return avisar("Precisa sobrar pelo menos uma forma.");
+  estado.pecas[grupo] = linhas;
+  guardar();
+  pintarPecas();
+  atualizarPrevia();
+}
+
+function criarPeca(grupo) {
+  const titulo = prompt(grupo === "ganchos"
+    ? "Nome do gancho (ex.: Já tem empréstimo em outro banco):"
+    : "Nome do pedido (ex.: Posso simular?):", "");
+  if (titulo === null || !titulo.trim()) return;
+  const textos = prompt(AJUDA_FORMAS, "");
+  if (textos === null) return;
+  const linhas = textos.split("\n").map((t) => t.trim()).filter(Boolean);
+  if (!linhas.length) return avisar("Escreva pelo menos uma forma de dizer.");
+
+  const id = (grupo === "ganchos" ? "g" : "p") + Date.now().toString(36);
+  estado.pecas[grupo].push({ id, titulo: titulo.trim(), textos: linhas });
+  guardar();
+  pintarPecas();
+  pintarMontador();
+  avisar("Peça criada.");
+}
+
 // ------------------------------------------------------------- navegação
 
 function irPara(tela) {
@@ -1405,7 +1783,7 @@ function irPara(tela) {
   if (tela === "fila") pintarFila();
   if (tela === "contatos") pintarContatos();
   if (tela === "ajustes") {
-    pintarModelos(); pintarEstadoCopia(); pintarConta(); pintarDiagnostico();
+    pintarModelos(); pintarPecas(); pintarEstadoCopia(); pintarConta(); pintarDiagnostico();
     if (nuvemConfigurada()) {
       $("#nuvem-url").value = nuvem.url;
       $("#nuvem-chave").value = nuvem.publica;
@@ -1418,8 +1796,8 @@ function irPara(tela) {
 function ligar() {
   // -- discagem
   $("#numero").addEventListener("input", pintarDiscagem);
-  $("#nome").addEventListener("input", () => { $("#previa").textContent = montarTexto(); });
-  $("#modelo").addEventListener("change", () => { $("#previa").textContent = montarTexto(); });
+  $("#nome").addEventListener("input", () => { atualizarPrevia(); });
+  $("#modelo").addEventListener("change", pintarDiscagem);
   $("#abrir").addEventListener("click", abrirConversa);
   $("#so-guardar").addEventListener("click", guardarSemMandar);
   $("#beneficio-numero").addEventListener("blur", () => {
@@ -1460,6 +1838,17 @@ function ligar() {
   });
 
   // -- abas
+  // -- montador
+  $("#montador").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-peca]");
+    if (!b) return;
+    const alvo = b.dataset.id;
+    if (b.dataset.peca === "ganchos") ganchoAtual = ganchoAtual === alvo ? null : alvo;
+    else pedidoAtual = pedidoAtual === alvo ? null : alvo;
+    pintarMontador();
+    atualizarPrevia();
+  });
+
   $$(".aba").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.tela)));
 
   // -- fila e contatos (delegação: as listas são redesenhadas o tempo todo)
@@ -1602,7 +1991,7 @@ function ligar() {
     estado.eu.instituicao = $("#eu-instituicao").value.trim();
     ajustesMexidos();
     guardar();
-    $("#previa").textContent = montarTexto();
+    atualizarPrevia();
   };
   $("#eu-nome").addEventListener("change", salvarEu);
   $("#eu-instituicao").addEventListener("change", salvarEu);
@@ -1618,6 +2007,20 @@ function ligar() {
   };
   ["#regua-1", "#regua-2", "#regua-r"].forEach((s) =>
     $(s).addEventListener("change", salvarRegua));
+
+  ["#ganchos-lista", "#pedidos-lista"].forEach((sel) =>
+    $(sel).addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-peca]");
+      if (b) editarPeca(b.dataset.peca, b.dataset.id);
+    }));
+
+  $("#fixas-lista").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-fixa]");
+    if (b) editarFixa(b.dataset.fixa);
+  });
+
+  $("#novo-gancho").addEventListener("click", () => criarPeca("ganchos"));
+  $("#novo-pedido").addEventListener("click", () => criarPeca("pedidos"));
 
   $("#novo-modelo").addEventListener("click", () => {
     const id = "m" + Date.now().toString(36);
@@ -1735,12 +2138,18 @@ function iniciarCampos() {
   $("#regua-2").value = estado.regua.dois;
   $("#regua-r").value = estado.regua.respondeu;
   $("#voltar-em").min = new Date().toISOString().slice(0, 10);
+  // Montar é a primeira opção da lista, então é o que abre. Sem um pedido
+  // marcado a mensagem sairia sem pergunta no fim — e mensagem sem pergunta
+  // não recebe resposta, que é o erro que o conferidor mais acusa.
+  if (!pedidoAtual) pedidoAtual = (estado.pecas.pedidos[0] || {}).id || null;
   encherTipos("#beneficio-tipo");
   encherTipos("#ficha-beneficio-tipo");
 }
 
 function pintarTudo() {
   pintarModelos();
+  pintarMontador();
+  pintarPecas();
   pintarDiscagem();
   pintarFila();
   pintarContatos();

@@ -97,7 +97,20 @@
       <select id="modelo"></select>
     </label>
 
+    <!-- As peças. Aparecem só quando a mensagem é montada, e cada botão
+         mostra a própria taxa de resposta: é o número que decide qual
+         abordagem funciona, e ele fica à vista na hora de escolher. -->
+    <div id="montador" class="montador oculto">
+      <span class="rotulo">Sobre o cliente</span>
+      <div class="chips" id="ganchos"></div>
+      <span class="rotulo">O que você pede</span>
+      <div class="chips" id="pedidos"></div>
+    </div>
+
     <div id="previa" class="previa oculto"></div>
+
+    <!-- O conferidor: mesma ideia do veredito, aplicada ao texto. -->
+    <p id="conferidor" class="conferidor oculto"></p>
 
     <button id="abrir" class="principal oculto">Abrir conversa no WhatsApp</button>
 
@@ -206,6 +219,25 @@
     <button id="novo-modelo" class="secundario">Criar modelo</button>
     <p class="dica">A taxa de resposta de cada modelo aparece na lista. É o número que
        mais vale aqui dentro: troque o texto que responde pouco.</p>
+
+    <h2>Peças da mensagem</h2>
+    <p class="dica">O que a mensagem montada diz. Cada peça guarda várias formas
+       de dizer a mesma coisa, e o app escolhe uma por pessoa — cinquenta
+       mensagens idênticas seguidas é o que faz o número cair.</p>
+
+    <h3>Ganchos</h3>
+    <div id="ganchos-lista" class="lista"></div>
+    <button id="novo-gancho" class="secundario">Criar gancho</button>
+
+    <h3>Pedidos</h3>
+    <div id="pedidos-lista" class="lista"></div>
+    <button id="novo-pedido" class="secundario">Criar pedido</button>
+
+    <h3>Partes fixas</h3>
+    <div id="fixas-lista" class="lista"></div>
+    <p class="dica">A taxa de resposta de cada gancho e de cada pedido aparece na
+       lista. É por ali que se descobre qual abordagem funciona, e não pelo
+       texto inteiro.</p>
 
     <h2>Sua conta</h2>
     <div id="estado-conta" class="veredito"></div>
