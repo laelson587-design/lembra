@@ -58,18 +58,36 @@ mesmo número que você digitaria no WhatsApp de qualquer jeito.
 ## O que tem dentro
 
 **Discar** — digita o número, lê o veredito, escolhe o modelo, abre a conversa.
-Depois marca o que aconteceu com um toque.
+Depois marca o que aconteceu com um toque. Dá também para **só guardar, sem
+mandar mensagem**: o número entra na memória e a régua começa no dia em que
+você decidir chamar.
 
 **Hoje** — a fila do dia pela régua de contato: só quem está no prazo. De 800
 nomes costumam sobrar poucas dezenas. Mandar menos é o que faz o chip durar.
 
-**Contatos** — busca por nome ou número, com filtros de quem respondeu, quem
-nunca respondeu e quem pediu para parar.
+**Contatos** — busca por nome, número, número do benefício ou tipo de benefício,
+com filtros de quem respondeu, quem nunca respondeu e quem pediu para parar.
 
-**Ficha** — histórico completo, anotações e a conversa guardada.
+**Ficha** — histórico completo, anotações, a conversa guardada e os dados do
+benefício.
 
 **Ajustes** — seu nome, a régua, os modelos de mensagem com **taxa de resposta
 de cada um**, e a cópia de segurança.
+
+## Benefício
+
+Cada contato guarda, além do nome, o **número do benefício** e o **tipo**
+(aposentadoria por idade, pensão por morte, BPC/LOAS e o resto da lista). Os
+dois são opcionais e podem ser preenchidos na hora de cadastrar ou depois, na
+ficha.
+
+O número é **formatado, nunca recusado**: lista de trabalho vem com número
+truncado e com número antigo, e barrar a digitação faria a pessoa desistir de
+anotar. Número meio certo ainda acha a pessoa na busca; número nenhum não acha.
+
+Vale saber o que isso muda na cópia de segurança: com número de benefício, o
+arquivo que você manda para o Drive ou para o e-mail passa a **identificar a
+pessoa por inteiro**. Guarde-o como você guardaria a lista impressa.
 
 ## A régua
 
@@ -105,6 +123,13 @@ Duas formas, ambas dentro da ficha do contato:
 
 Vale fazer isso **antes** de um número cair, com os clientes que importam.
 Conversa exportada é o único jeito de o histórico sobreviver ao bloqueio.
+
+E o caminho de volta: **Exportar a conversa deste contato**, no fim da ficha,
+sai com um arquivo de texto contendo tudo que está guardado ali — mensagens
+enviadas, anotações, retornos marcados, conversa colada e importada. Vai pela
+folha de compartilhar (WhatsApp, e-mail, Drive) ou, onde ela não existir, como
+download. Texto puro de propósito: abre em qualquer coisa, hoje e daqui a dez
+anos.
 
 ## Decisões
 

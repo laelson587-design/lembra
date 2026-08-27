@@ -39,6 +39,21 @@ const MODELOS_PADRAO = [
   },
 ];
 
+/* Os tipos que aparecem na lista. "Outro" fecha o conjunto sem obrigar a
+ * escolher errado, e a escolha vazia continua valendo: benefício desconhecido
+ * é o normal no primeiro contato. */
+const TIPOS_BENEFICIO = [
+  "Aposentadoria por idade",
+  "Aposentadoria por tempo de contribuição",
+  "Aposentadoria por invalidez",
+  "Pensão por morte",
+  "Auxílio-doença",
+  "Auxílio-acidente",
+  "Auxílio-reclusão",
+  "BPC / LOAS",
+  "Outro",
+];
+
 const PADRAO = {
   versao: 1,
   eu: { nome: "", instituicao: "" },
@@ -160,6 +175,33 @@ function bonito(bruto) {
   return bruto;
 }
 
+/**
+ * O número do benefício tem dez dígitos, e o último é verificador. Aqui ele é
+ * só formatado, nunca recusado: lista de trabalho vem com número truncado e
+ * com número antigo, e barrar a digitação faria a pessoa desistir de anotar.
+ * Número meio certo ainda acha a pessoa na busca; número nenhum não acha.
+ */
+function beneficioBonito(bruto) {
+  const d = soDigitos(bruto);
+  if (d.length === 10) return d.slice(0, 3) + "." + d.slice(3, 6) + "." + d.slice(6, 9) + "-" + d[9];
+  return String(bruto || "").trim();
+}
+
+function baixarArquivo(nome, conteudo, tipo) {
+  const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Enche uma lista de tipos de benefício, com a opção de não dizer nada. */
+function encherTipos(sel) {
+  $(sel).innerHTML = '<option value="">Não informado</option>' +
+    TIPOS_BENEFICIO.map((t) => '<option value="' + escapar(t) + '">' + escapar(t) + "</option>").join("");
+}
+
 function hoje() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -242,9 +284,40 @@ function criar(bruto, nome) {
     criadoEm: new Date().toISOString(),
     status: "ABERTO",
     voltarEm: null,
+    beneficio: null,
+    beneficioEm: null,
     eventos: [],
   };
   return estado.contatos[k];
+}
+
+function beneficioDe(c) {
+  return { numero: "", tipo: "", ...((c && c.beneficio) || {}) };
+}
+
+/** "123.456.789-0 · Aposentadoria por idade", ou vazio se não há nada. */
+function resumoBeneficio(c) {
+  const b = beneficioDe(c);
+  return [b.numero ? beneficioBonito(b.numero) : "", b.tipo].filter(Boolean).join(" · ");
+}
+
+/**
+ * Guarda o benefício no contato. Diferente da situação, que é deduzida dos
+ * eventos, isto é um ajuste: quando dois aparelhos discordam vence quem mexeu
+ * por último, e é para isso que serve o carimbo `beneficioEm`. O evento no
+ * histórico é só memória de quando foi anotado.
+ */
+function anotarBeneficio(c, numeroBruto, tipo) {
+  const antes = beneficioDe(c);
+  const depois = { numero: soDigitos(numeroBruto), tipo: (tipo || "").trim() };
+  if (antes.numero === depois.numero && antes.tipo === depois.tipo) return false;
+
+  c.beneficio = depois.numero || depois.tipo ? depois : null;
+  c.beneficioEm = new Date().toISOString();
+  registrar(c, "BENEFICIO", {
+    texto: resumoBeneficio(c) || "Dados do benefício apagados",
+  });
+  return true;
 }
 
 function registrar(c, tipo, extra = {}) {
@@ -395,8 +468,9 @@ function pintarDiscagem() {
 
   if (!ok) {
     chaveAtual = null;
-    ["#veredito", "#campo-nome", "#campo-modelo", "#previa", "#abrir",
-      "#desfecho", "#agendar", "#ver-ficha"].forEach((s) => mostrar(s, false));
+    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#previa",
+      "#abrir", "#so-guardar", "#desfecho", "#agendar", "#ver-ficha"]
+      .forEach((s) => mostrar(s, false));
     return;
   }
 
@@ -406,7 +480,15 @@ function pintarDiscagem() {
   // Trocou de pessoa? O nome tem de trocar junto. Sem isto, digitar o número
   // da Maria logo depois do José deixava "Sr. José" no campo — e a mensagem
   // saía com o nome errado, que é pior do que sair sem nome nenhum.
-  if (k !== chaveAtual) $("#nome").value = c ? c.nome || "" : "";
+  if (k !== chaveAtual) {
+    $("#nome").value = c ? c.nome || "" : "";
+    const b = beneficioDe(c);
+    $("#beneficio-numero").value = b.numero ? beneficioBonito(b.numero) : "";
+    $("#beneficio-tipo").value = b.tipo || "";
+    // Quem já tem benefício anotado vê na hora; quem não tem não perde a tela
+    // com um campo que não vai preencher agora.
+    $("#campo-beneficio").open = !!(b.numero || b.tipo);
+  }
   chaveAtual = k;
 
   const v = julgar(c);
@@ -418,9 +500,11 @@ function pintarDiscagem() {
 
   mostrar("#veredito", true);
   mostrar("#campo-nome", true);
+  mostrar("#campo-beneficio", true);
   mostrar("#campo-modelo", true);
   mostrar("#previa", true);
   mostrar("#abrir", true);
+  mostrar("#so-guardar", true);
   mostrar("#ver-ficha", !!c);
   mostrar("#desfecho", !!c && !!ultimoEnvio(c));
   mostrar("#agendar", true);
@@ -442,6 +526,37 @@ function montarTexto() {
     .trim();
 }
 
+/** Nome e benefício digitados na tela de discar, aplicados ao contato. */
+function aplicarCamposDaDiscagem(c) {
+  const nome = ($("#nome").value || "").trim();
+  if (nome) c.nome = nome;
+  return anotarBeneficio(c, $("#beneficio-numero").value, $("#beneficio-tipo").value);
+}
+
+/**
+ * Cadastrar sem chamar. É o contrário do resto do app, e por isso existe: o
+ * número às vezes chega pelo balcão ou por indicação, e mandar na hora é
+ * justamente o que queima o chip. A pessoa fica guardada, o veredito passa a
+ * valer para ela, e nenhuma mensagem saiu.
+ */
+function guardarSemMandar() {
+  const bruto = $("#numero").value;
+  if (!valido(bruto)) return avisar("Número incompleto.");
+
+  let c = achar(bruto);
+  const jaEra = !!c;
+  if (!c) c = criar(bruto, $("#nome").value);
+  const mexeu = aplicarCamposDaDiscagem(c);
+  if (!guardar()) return;
+
+  pintarDiscagem();
+  pintarFila();
+  pintarContatos();
+  avisar(!jaEra ? "Contato guardado, sem mandar nada."
+    : mexeu ? "Contato atualizado."
+    : "Este contato já estava guardado.");
+}
+
 function abrirConversa() {
   const bruto = $("#numero").value;
   if (!valido(bruto)) return avisar("Número incompleto.");
@@ -454,8 +569,7 @@ function abrirConversa() {
     if (!confirm("Esta pessoa pediu para não receber mais mensagens.\n\nMandar assim mesmo?")) return;
   }
 
-  const nome = ($("#nome").value || "").trim();
-  if (nome) c.nome = nome;
+  aplicarCamposDaDiscagem(c);
 
   const modeloId = $("#modelo").value;
   const texto = montarTexto();
@@ -624,9 +738,11 @@ function pintarContatos() {
     if (filtroAtual === "MUDOS" && (jaRespondeu(c) || totalEnviados(c) === 0)) return false;
     if (filtroAtual === "NAO_PERTURBE" && c.status !== "NAO_PERTURBE") return false;
     if (!busca) return true;
+    const b = beneficioDe(c);
     return digitos
-      ? c.numero.includes(busca)
-      : (c.nome || "").toLowerCase().includes(busca);
+      ? c.numero.includes(busca) || b.numero.includes(busca)
+      : (c.nome || "").toLowerCase().includes(busca)
+        || b.tipo.toLowerCase().includes(busca);
   });
 
   itens.sort((a, b) => {
@@ -676,6 +792,7 @@ const ROTULO_EVENTO = {
   NOTA: "Anotação",
   CONVERSA: "Conversa guardada",
   IMPORTADO: "Histórico importado do WhatsApp",
+  BENEFICIO: "Dados do benefício",
 };
 
 function abrirFicha(k) {
@@ -686,6 +803,14 @@ function abrirFicha(k) {
   $("#ficha-nome").textContent = c.nome || "Sem nome";
   $("#ficha-numero").textContent = bonito(c.numero);
   $("#ficha-editar-nome").value = c.nome || "";
+
+  const b = beneficioDe(c);
+  $("#ficha-beneficio-numero").value = b.numero ? beneficioBonito(b.numero) : "";
+  $("#ficha-beneficio-tipo").value = b.tipo || "";
+  const resumo = resumoBeneficio(c);
+  $("#ficha-beneficio-resumo").textContent = resumo;
+  $("#ficha-beneficio-resumo").classList.toggle("oculto", !resumo);
+
   $("#ficha-nota").value = "";
   $("#ficha-conversa").value = "";
   $("#ficha-voltar-em").min = new Date().toISOString().slice(0, 10);
@@ -740,6 +865,67 @@ function lerExportacao(cru) {
   const inicio = /^\[?\d{1,2}\/\d{1,2}\/\d{2,4}[,]?\s+\d{1,2}:\d{2}/;
   const mensagens = linhas.filter((l) => inicio.test(l)).length;
   return { texto: limpo.trim(), mensagens };
+}
+
+// ------------------------------------------------- a conversa para fora
+
+/**
+ * Dentro do app a conversa é a prova do que ficou combinado; fora dele é o que
+ * sobrevive ao aparelho, ao chip e ao próprio Lembra. Sai em texto puro de
+ * propósito: abre em qualquer coisa, hoje e daqui a dez anos.
+ */
+function textoDaFicha(c) {
+  const linhas = [
+    "Lembra — histórico de " + (c.nome || bonito(c.numero)),
+    "Telefone: " + bonito(c.numero),
+  ];
+  const b = resumoBeneficio(c);
+  if (b) linhas.push("Benefício: " + b);
+  linhas.push("Exportado em " + dataHora(new Date().toISOString()));
+  linhas.push("", "----------------------------------------", "");
+
+  if (!c.eventos.length) {
+    linhas.push("Sem histórico guardado.");
+  } else {
+    for (const e of c.eventos) {
+      linhas.push("[" + dataHora(e.em) + "] " + (ROTULO_EVENTO[e.tipo] || e.tipo));
+      if (e.texto) linhas.push(e.texto);
+      linhas.push("");
+    }
+  }
+  return linhas.join("\n");
+}
+
+function nomeDoArquivoDaFicha(c) {
+  const cru = (c.nome || c.numero).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const limpo = cru.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+  return "conversa-" + (limpo || c.numero) + "-" + new Date().toISOString().slice(0, 10) + ".txt";
+}
+
+async function exportarConversa() {
+  const c = estado.contatos[chaveFicha];
+  if (!c) return;
+
+  const conteudo = textoDaFicha(c);
+  const nome = nomeDoArquivoDaFicha(c);
+  const arquivo = new File([conteudo], nome, { type: "text/plain" });
+
+  // Mesma razão da cópia de segurança: no celular, baixar é esconder. A folha
+  // de compartilhar leva para o WhatsApp, o e-mail ou o Drive.
+  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+    try {
+      await navigator.share({
+        files: [arquivo],
+        title: "Conversa — " + (c.nome || bonito(c.numero)),
+      });
+      avisar("Conversa enviada.");
+    } catch (e) {
+      // fechou a folha de compartilhar; não é erro
+    }
+    return;
+  }
+  baixarArquivo(nome, conteudo, "text/plain");
+  avisar("Arquivo de texto baixado.");
 }
 
 // -------------------------------------------------------- agenda do celular
@@ -1053,12 +1239,7 @@ async function enviarCopia() {
 }
 
 function baixarCopia() {
-  const url = URL.createObjectURL(new Blob([conteudoDaCopia()], { type: "application/json" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nomeDaCopia();
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  baixarArquivo(nomeDaCopia(), conteudoDaCopia(), "application/json");
   marcarCopiaFeita();
 }
 
@@ -1174,6 +1355,10 @@ function ligar() {
   $("#nome").addEventListener("input", () => { $("#previa").textContent = montarTexto(); });
   $("#modelo").addEventListener("change", () => { $("#previa").textContent = montarTexto(); });
   $("#abrir").addEventListener("click", abrirConversa);
+  $("#so-guardar").addEventListener("click", guardarSemMandar);
+  $("#beneficio-numero").addEventListener("blur", () => {
+    $("#beneficio-numero").value = beneficioBonito($("#beneficio-numero").value);
+  });
   $("#ver-ficha").addEventListener("click", () => chaveAtual && abrirFicha(chaveAtual));
 
   $$("#desfecho .resultado").forEach((b) =>
@@ -1254,6 +1439,19 @@ function ligar() {
     guardar();
     $("#ficha-nome").textContent = c.nome || "Sem nome";
   });
+
+  const salvarBeneficioDaFicha = () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    if (!anotarBeneficio(c, $("#ficha-beneficio-numero").value, $("#ficha-beneficio-tipo").value)) return;
+    guardar();
+    abrirFicha(chaveFicha);
+    avisar("Benefício anotado.");
+  };
+  $("#ficha-beneficio-numero").addEventListener("change", salvarBeneficioDaFicha);
+  $("#ficha-beneficio-tipo").addEventListener("change", salvarBeneficioDaFicha);
+
+  $("#exportar-conversa").addEventListener("click", exportarConversa);
 
   $("#ficha-marcar-retorno").addEventListener("click", () => {
     const c = estado.contatos[chaveFicha];
@@ -1470,6 +1668,8 @@ function iniciarCampos() {
   $("#regua-2").value = estado.regua.dois;
   $("#regua-r").value = estado.regua.respondeu;
   $("#voltar-em").min = new Date().toISOString().slice(0, 10);
+  encherTipos("#beneficio-tipo");
+  encherTipos("#ficha-beneficio-tipo");
 }
 
 function pintarTudo() {

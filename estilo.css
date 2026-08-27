@@ -113,6 +113,29 @@ textarea { resize: vertical; }
 .linha-num input { width: 96px; text-align: center; }
 .linha-num i { font-style: normal; color: var(--fraco); font-size: 14px; }
 
+/* ---------- bloco dobrável ---------- */
+
+/* Serve para o que quase ninguém preenche na pressa, mas alguém precisa achar:
+   fechado ocupa uma linha, aberto vira campo normal. */
+details.bloco {
+  margin-bottom: 14px; padding: 0 14px;
+  background: var(--carta);
+  border: 1px solid var(--borda); border-radius: var(--raio);
+}
+details.bloco > summary {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; cursor: pointer; list-style: none;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--fraco);
+}
+details.bloco > summary::-webkit-details-marker { display: none; }
+details.bloco > summary::after { content: "+"; font-size: 20px; color: var(--tenue); }
+details.bloco[open] > summary::after { content: "–"; }
+details.bloco[open] > summary {
+  margin-bottom: 14px; border-bottom: 1px solid var(--borda);
+}
+details.bloco > :last-child { margin-bottom: 0; padding-bottom: 14px; }
+
 /* ---------- botões ---------- */
 
 button { font: inherit; cursor: pointer; }

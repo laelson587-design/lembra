@@ -65,6 +65,23 @@
       <input id="nome" type="text" placeholder="Sr. José" autocomplete="off">
     </label>
 
+    <!-- Dobrado por padrão: quem está com pressa não abre, e quem precisa do
+         número do benefício acha na hora de cadastrar. -->
+    <details class="bloco oculto" id="campo-beneficio">
+      <summary>Dados do benefício</summary>
+      <label class="campo">
+        <span class="rotulo">Número do benefício</span>
+        <input id="beneficio-numero" type="text" inputmode="numeric"
+               placeholder="000.000.000-0" autocomplete="off">
+      </label>
+      <label class="campo">
+        <span class="rotulo">Tipo de benefício</span>
+        <select id="beneficio-tipo"></select>
+      </label>
+      <p class="dica">Fica guardado com o contato, neste aparelho — e entra na
+         cópia de segurança que você mandar para fora.</p>
+    </details>
+
     <label class="campo oculto" id="campo-modelo">
       <span class="rotulo">Mensagem</span>
       <select id="modelo"></select>
@@ -73,6 +90,12 @@
     <div id="previa" class="previa oculto"></div>
 
     <button id="abrir" class="principal oculto">Abrir conversa no WhatsApp</button>
+
+    <!-- Nem todo cadastro nasce de uma mensagem: o número às vezes chega pelo
+         balcão ou por indicação, e mandar na hora é justamente o que queima o
+         chip. Guardar sem chamar deixa a pessoa aqui, e a régua começa no dia
+         em que ele decidir chamar. -->
+    <button id="so-guardar" class="secundario oculto">Só guardar, sem mandar mensagem</button>
 
     <!-- Só aparece depois de abrir a conversa: o que aconteceu. -->
     <div id="desfecho" class="desfecho oculto">
@@ -253,6 +276,7 @@
     <div>
       <h2 id="ficha-nome"></h2>
       <p id="ficha-numero" class="mono"></p>
+      <p id="ficha-beneficio-resumo" class="sub oculto"></p>
     </div>
   </div>
   <div class="corpo">
@@ -270,6 +294,17 @@
     <label class="campo">
       <span class="rotulo">Nome</span>
       <input id="ficha-editar-nome" type="text" autocomplete="off">
+    </label>
+
+    <h3>Benefício</h3>
+    <label class="campo">
+      <span class="rotulo">Número do benefício</span>
+      <input id="ficha-beneficio-numero" type="text" inputmode="numeric"
+             placeholder="000.000.000-0" autocomplete="off">
+    </label>
+    <label class="campo">
+      <span class="rotulo">Tipo de benefício</span>
+      <select id="ficha-beneficio-tipo"></select>
     </label>
 
     <h3>Retorno</h3>
@@ -296,6 +331,12 @@
       Importar exportação do WhatsApp
       <input id="ficha-arquivo" type="file" accept="text/plain,.txt" hidden>
     </label>
+
+    <h3>Tirar daqui</h3>
+    <p class="dica">Sai um arquivo de texto com a conversa guardada, as anotações
+       e tudo que já foi mandado para este número. Serve para levar para outro
+       lugar, imprimir ou guardar fora do celular.</p>
+    <button id="exportar-conversa" class="secundario">Exportar a conversa deste contato</button>
 
     <h3>Histórico</h3>
     <div id="ficha-historico" class="linha-tempo"></div>

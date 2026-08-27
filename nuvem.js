@@ -230,12 +230,21 @@ function mesclarContato(a, b) {
   if (!b) return a;
   const eventos = juntarEventos(a.eventos, b.eventos);
   const maisNovo = new Date(a.criadoEm) <= new Date(b.criadoEm) ? a : b;
+
+  // O benefício não é dedução de evento nenhum: é ajuste, e ajuste resolve por
+  // quem mexeu por último. Só que "por último" precisa de carimbo — sem ele o
+  // lado que nunca ouviu falar em benefício apagaria o do outro.
+  const donoBen = new Date(a.beneficioEm || 0) >= new Date(b.beneficioEm || 0) ? a : b;
+  const outroBen = donoBen === a ? b : a;
+
   return {
     numero: (a.numero || "").length >= (b.numero || "").length ? a.numero : b.numero,
     nome: a.nome || b.nome || "",
     criadoEm: new Date(a.criadoEm) <= new Date(b.criadoEm) ? a.criadoEm : b.criadoEm,
     status: situacaoPorEventos(eventos),
     voltarEm: retornoPorEventos(eventos, maisNovo.voltarEm),
+    beneficio: (donoBen.beneficioEm ? donoBen.beneficio : null) || outroBen.beneficio || null,
+    beneficioEm: donoBen.beneficioEm || outroBen.beneficioEm || null,
     eventos,
   };
 }
