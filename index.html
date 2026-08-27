@@ -57,6 +57,16 @@
          <b>Restaurar cópia</b> para trazer de volta.</p>
     </div>
 
+    <!-- A cópia é a única coisa que sobrevive a trocar de celular, e cobrá-la
+         nos Ajustes não funciona: ninguém abre Ajustes. Então ela cobra aqui,
+         na primeira tela, com o botão do lado — e some sozinha assim que a
+         cópia é feita. -->
+    <div id="copia-atrasada" class="veredito cuidado oculto">
+      <p class="titulo" id="copia-atrasada-titulo"></p>
+      <p class="detalhe" id="copia-atrasada-detalhe"></p>
+      <button id="copia-atrasada-botao" class="principal">Enviar cópia agora</button>
+    </div>
+
     <!-- O veredito. É o coração do app: aparece ANTES de mandar, não depois. -->
     <div id="veredito" class="veredito oculto"></div>
 
@@ -255,6 +265,8 @@
        Some se você limpar os dados do navegador ou trocar de celular — por isso
        a cópia. Mande para o seu e-mail ou para o Drive e ela sobrevive a tudo.</p>
     <button id="enviar-copia" class="principal">Enviar cópia para o Drive ou e-mail</button>
+    <p class="dica">A cada 7 dias, se tiver acontecido coisa nova, o app cobra a
+       cópia na tela de Discar. Copiou e não trabalhou? Ele fica quieto.</p>
     <button id="exportar" class="secundario">Só baixar o arquivo</button>
     <label class="secundario arquivo">
       Restaurar cópia

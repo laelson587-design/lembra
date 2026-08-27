@@ -224,8 +224,24 @@ Duas defesas, e as duas estão no app:
    Instalar na tela inicial aumenta a chance de o Android conceder.
 2. **Enviar cópia** abre a folha de compartilhar do celular, então o arquivo vai
    direto para o Drive, o e-mail ou uma conversa. Cópia baixada some numa pasta
-   que ninguém revisita; cópia enviada sobrevive à troca de aparelho. Os Ajustes
-   mostram quando foi a última e avisam depois de 30 dias.
+   que ninguém revisita; cópia enviada sobrevive à troca de aparelho.
+
+### A cobrança da cópia
+
+Ficar só nos Ajustes não adianta: ninguém abre Ajustes. Então, quando a cópia
+atrasa, a **tela de Discar** cobra, com o botão de enviar ali mesmo — e o cartão
+some no instante em que a cópia sai.
+
+Ela aparece quando **há o que perder**, e não por calendário:
+
+- nunca houve cópia e já existem 3 contatos ou mais; ou
+- a última cópia completou **7 dias** *e* aconteceu coisa nova desde então.
+
+Quem copiou e passou a semana sem trabalhar não é incomodado — a cópia dele
+continua valendo. E o texto conta o prejuízo em vez de contar dias: *"depois
+dela entraram 12 contatos novos e 30 registros"* move o dedo; *"faz 9 dias"*
+não move. O cartão nunca aparece com um número digitado, para não atrapalhar
+quem está trabalhando.
 
 ## Diagnóstico
 

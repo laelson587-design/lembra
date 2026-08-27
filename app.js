@@ -464,7 +464,14 @@ function pintarDiscagem() {
   mostrar("#instalar", precisaInstalar && !ok);
 
   // O aviso de "sumiu tudo" só faz sentido com a tela parada e vazia.
-  mostrar("#sumiu", !ok && !precisaInstalar && Object.keys(estado.contatos).length === 0);
+  const semContatos = Object.keys(estado.contatos).length === 0;
+  mostrar("#sumiu", !ok && !precisaInstalar && semContatos);
+
+  // A cobrança da cópia vem depois dos dois: quem ainda não instalou tem
+  // problema maior, e quem está com a lista vazia não tem o que copiar.
+  const cobrar = !ok && !precisaInstalar && !semContatos && precisaCobrarCopia();
+  if (cobrar) pintarCobrancaDaCopia();
+  mostrar("#copia-atrasada", cobrar);
 
   if (!ok) {
     chaveAtual = null;
@@ -1207,6 +1214,11 @@ function conteudoDaCopia() {
   return JSON.stringify(estado, null, 2);
 }
 
+/* Sete dias, e não trinta. Um mês de trabalho perdido é a diferença entre um
+   susto e recomeçar do zero — e a cobrança só sai quando há o que perder,
+   então encurtar o prazo não custa incômodo a mais. */
+const DIAS_ATE_COBRAR_COPIA = 7;
+
 function nomeDaCopia() {
   return `lembra-${new Date().toISOString().slice(0, 10)}.json`;
 }
@@ -1215,6 +1227,59 @@ function marcarCopiaFeita() {
   estado.copiaEm = new Date().toISOString();
   guardar();
   pintarEstadoCopia();
+  pintarDiscagem();   // a cobrança na primeira tela some na hora
+}
+
+/**
+ * O que se perderia se o aparelho sumisse agora: tudo que nasceu depois da
+ * última cópia. Contar isso vale mais do que contar dias — dizer "12 contatos
+ * novos" move o dedo, e "faz 9 dias" não move.
+ */
+function perdaDesdeACopia() {
+  const marco = estado.copiaEm ? new Date(estado.copiaEm).getTime() : 0;
+  let contatos = 0, eventos = 0;
+  for (const c of Object.values(estado.contatos)) {
+    if (new Date(c.criadoEm).getTime() > marco) contatos++;
+    eventos += (c.eventos || []).filter((e) => new Date(e.em).getTime() > marco).length;
+  }
+  return { contatos, eventos };
+}
+
+/**
+ * Cobrar todo dia vira paisagem, e paisagem ninguém aperta. A cobrança só
+ * aparece quando há mesmo o que perder: nunca copiou e já juntou gente, ou a
+ * cópia completou uma semana E aconteceu coisa nova desde então. Quem copiou e
+ * passou a semana sem trabalhar não é incomodado — a cópia dele está em dia.
+ */
+function precisaCobrarCopia() {
+  const perda = perdaDesdeACopia();
+  if (!perda.contatos && !perda.eventos) return false;
+  if (!estado.copiaEm) return Object.keys(estado.contatos).length >= 3;
+  return diasEntre(dia(estado.copiaEm), hoje()) >= DIAS_ATE_COBRAR_COPIA;
+}
+
+/** Em quantos contatos e quantos registros a perda se traduz, por extenso. */
+function perdaPorExtenso() {
+  const { contatos, eventos } = perdaDesdeACopia();
+  const partes = [];
+  if (contatos) partes.push(contatos === 1 ? "1 contato novo" : contatos + " contatos novos");
+  if (eventos) partes.push(eventos === 1 ? "1 registro" : eventos + " registros");
+  return partes.join(" e ");
+}
+
+function pintarCobrancaDaCopia() {
+  const quantos = Object.keys(estado.contatos).length;
+  if (!estado.copiaEm) {
+    $("#copia-atrasada-titulo").textContent = "Você nunca tirou uma cópia";
+    $("#copia-atrasada-detalhe").textContent =
+      `Seus ${quantos} ${quantos === 1 ? "contato existe" : "contatos existem"} só neste ` +
+      "celular. Trocar de aparelho, ou o navegador fazer limpeza, apaga tudo.";
+    return;
+  }
+  $("#copia-atrasada-titulo").textContent = "Sua cópia é de " + dataCurta(estado.copiaEm);
+  $("#copia-atrasada-detalhe").textContent =
+    `Depois dela entraram ${perdaPorExtenso()}. É isso que se perde se este ` +
+    "celular sumir hoje — o resto está na cópia.";
 }
 
 /**
@@ -1259,12 +1324,13 @@ function pintarEstadoCopia() {
       só neste aparelho.</p>`;
     return;
   }
-  const dias = diasEntre(dia(estado.copiaEm), hoje());
-  const velha = dias >= 30;
+  const velha = precisaCobrarCopia();
+  const perdido = perdaPorExtenso();
   el.className = "veredito " + (velha ? "cuidado" : "ok");
-  el.innerHTML = `<p class="titulo">${velha ? "Cópia velha" : "Cópia em dia"}</p>
+  el.innerHTML = `<p class="titulo">${velha ? "Cópia atrasada" : "Cópia em dia"}</p>
     <p class="detalhe">Última em ${escapar(dataCurta(estado.copiaEm))}, ${escapar(haQuanto(estado.copiaEm))}
-    · ${quantos} ${quantos === 1 ? "contato" : "contatos"}.</p>`;
+    · ${quantos} ${quantos === 1 ? "contato" : "contatos"}.${
+      perdido ? " Fora da cópia: " + escapar(perdido) + "." : " Nada mudou desde então."}</p>`;
 }
 
 // ------------------------------------------------------------- modelos
@@ -1613,6 +1679,7 @@ function ligar() {
   });
 
   $("#enviar-copia").addEventListener("click", enviarCopia);
+  $("#copia-atrasada-botao").addEventListener("click", enviarCopia);
   $("#exportar").addEventListener("click", () => {
     baixarCopia();
     avisar("Arquivo baixado. Guarde num lugar seguro.");
@@ -1697,8 +1764,10 @@ async function comecar() {
 
   if (!estado.eu.nome) {
     avisar("Comece pelos Ajustes: ponha seu nome na mensagem.");
-  } else if (temCopiaVelha()) {
-    avisar("Faz mais de 30 dias sem cópia. Ajustes → enviar cópia.");
+  } else if (precisaCobrarCopia() && $("#copia-atrasada").classList.contains("oculto")) {
+    // O cartão da primeira tela é a cobrança de verdade. Este aviso só cobre o
+    // caso em que ele cedeu o lugar para algo mais urgente, como instalar.
+    avisar("Sua cópia está atrasada. Ajustes → enviar cópia.");
   }
 
   if ("serviceWorker" in navigator) {
@@ -1716,12 +1785,6 @@ async function comecar() {
       : fixado === false
         ? "O aparelho pode apagar estes dados se ficar sem espaço. Instalar o app na tela inicial reduz o risco — e a cópia resolve de vez."
         : "";
-}
-
-function temCopiaVelha() {
-  if (!Object.keys(estado.contatos).length) return false;
-  if (!estado.copiaEm) return true;
-  return diasEntre(dia(estado.copiaEm), hoje()) >= 30;
 }
 
 comecar().catch((e) => console.error("não deu para começar", e));

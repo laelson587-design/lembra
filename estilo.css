@@ -202,6 +202,8 @@ button { font: inherit; cursor: pointer; }
 .veredito.cuidado .titulo { color: var(--atencao); }
 .veredito.pare .titulo    { color: var(--ruim); }
 
+.veredito .principal { margin-top: 12px; }
+
 .passos { margin: 10px 0 4px; padding-left: 20px; font-size: 14px; color: var(--fraco); }
 .passos li { margin-bottom: 6px; }
 .passos b { color: var(--texto); }
