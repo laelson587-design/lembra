@@ -257,6 +257,25 @@ button { font: inherit; cursor: pointer; }
 .conferidor.bom   { color: var(--bom);     background: var(--bom-fraco); }
 .conferidor.aviso { color: var(--atencao); background: var(--atencao-fraco); }
 
+/* Fica colada acima da barra de abas — 76px é o espaço que o corpo já
+   reserva para elas — senão sumiria atrás delas numa lista longa. */
+.barra-selecao {
+  position: sticky; bottom: 76px; z-index: 40;
+  margin: 4px -16px 12px; padding: 12px 16px;
+  background: var(--fundo);
+  border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda);
+}
+.linha-selecao { display: flex; align-items: center; gap: 8px; }
+.linha-selecao + .linha-selecao { margin-top: 10px; }
+.linha-selecao .dica { flex: 1; margin: 0; font-weight: 600; color: var(--texto); }
+.linha-selecao .principal, .linha-selecao .secundario {
+  flex: 1; width: auto; margin-top: 0; padding: 12px;
+}
+.linha-selecao .curto { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; }
+.barra-selecao .principal:disabled { opacity: 0.45; }
+
+.item.marcado { border-color: var(--marca); background: var(--marca-fraca); }
+
 .vazio { padding: 32px 16px; text-align: center; color: var(--tenue); }
 
 /* ---------- ficha ---------- */

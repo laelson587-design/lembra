@@ -293,6 +293,39 @@ dela entraram 12 contatos novos e 30 registros"* move o dedo; *"faz 9 dias"*
 não move. O cartão nunca aparece com um número digitado, para não atrapalhar
 quem está trabalhando.
 
+### Levar para outro aparelho
+
+O arquivo é texto comum, então Android e iPhone se entendem sem intermediário.
+
+**Tudo** — Ajustes → **Enviar cópia**. No aparelho novo, **Restaurar cópia**.
+
+**Só alguns** — Contatos → **Escolher contatos para enviar**. O toque na lista
+passa a marcar em vez de abrir a ficha, e os filtros de cima fazem metade do
+trabalho: filtre *Responderam* e toque em **Marcar os N à vista**.
+
+Cópia parcial é marcada como parcial no arquivo, e isso muda o que ela pode
+fazer do outro lado: **arquivo parcial sempre junta, nunca substitui** — senão
+mandar cinco contatos apagaria oitocentos. E enviar alguns **não conta como
+cópia de segurança**: a cobrança continua de pé, porque o resto continua sem
+cópia.
+
+### Juntar em vez de substituir
+
+Restaurar num aparelho que já tem contatos pergunta antes:
+
+- **Juntar** — nada se perde dos dois lados. É o caminho de quem usa dois
+  aparelhos.
+- **Substituir** — apaga o que está aqui e fica só a cópia. Pede confirmação
+  duas vezes, e a segunda diz quantos contatos vão embora.
+
+Aparelho vazio não pergunta: juntar com nada é restaurar.
+
+Juntar reaproveita a mesclagem escrita para a conta que ficou dormindo, e
+funciona sem servidor nenhum pelo mesmo motivo: **o histórico é só
+acrescentado**, então unir dois lados é unir listas e tirar repetições, sem
+escolher vencedor. Situação e retorno saem dos eventos; nome, benefício, régua,
+modelos e peças resolvem por quem mexeu por último.
+
 ## Diagnóstico
 
 Se os dados sumirem, **Ajustes → Diagnóstico** mede o que ninguém consegue ver.

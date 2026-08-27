@@ -892,6 +892,9 @@ function pintarContatos() {
     ? (itens.length === total ? `${total}` : `${itens.length} de ${total}`)
     : "nenhum";
 
+  visiveis = itens.map(({ k }) => k);
+  pintarBarraSelecao();
+
   const lista = $("#contatos-lista");
   if (!itens.length) {
     lista.innerHTML = `<p class="vazio">${total
@@ -903,15 +906,116 @@ function pintarContatos() {
   lista.innerHTML = itens.map(({ k, c }) => {
     const v = julgar(c);
     const n = totalEnviados(c);
-    return `<button class="item ${v.classe}" data-contato="${escapar(k)}">
+    const marcado = selecionando && selecionados.has(k);
+    return `<button class="item ${v.classe}${marcado ? " marcado" : ""}" data-contato="${escapar(k)}">
       <span class="cresce">
-        <span class="nome">${escapar(c.nome || bonito(c.numero))}</span>
+        <span class="nome">${selecionando ? (marcado ? "☑ " : "☐ ") : ""}${escapar(c.nome || bonito(c.numero))}</span>
         <span class="sub">${escapar(bonito(c.numero))} · ${n} ${n === 1 ? "mensagem" : "mensagens"}${
           jaRespondeu(c) ? " · respondeu" : ""}</span>
       </span>
       <span class="seta">›</span>
     </button>`;
   }).join("");
+}
+
+// ------------------------------------------------- escolher e enviar contatos
+
+/* Quem está escolhendo não está lendo ficha: enquanto a seleção está ligada, o
+   toque na lista marca em vez de abrir. */
+let selecionando = false;
+const selecionados = new Set();
+let visiveis = [];   // as chaves que o filtro deixou na tela agora
+
+/**
+ * Manda um arquivo pela folha de compartilhar, com o download como plano B.
+ * Devolve true se foi mesmo embora — quem chama decide o que fazer com isso,
+ * e é por isso que a cópia parcial não carimba a data da cópia.
+ */
+async function mandarArquivo(nome, conteudo, tipo, titulo) {
+  const arquivo = new File([conteudo], nome, { type: tipo });
+  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], title: titulo });
+      return true;
+    } catch (e) {
+      return false;   // fechou a folha; não é erro
+    }
+  }
+  baixarArquivo(nome, conteudo, tipo);
+  avisar("Este aparelho não abre a folha de compartilhar. O arquivo foi baixado.");
+  return true;
+}
+
+/**
+ * Uma cópia com só alguns contatos. Vai marcada como `parcial` de propósito:
+ * do outro lado, o arquivo parcial só pode ser JUNTADO, nunca substituir o
+ * aparelho inteiro — senão mandar cinco contatos apagaria oitocentos.
+ */
+function conteudoParcial(chaves) {
+  const contatos = {};
+  for (const k of chaves) if (estado.contatos[k]) contatos[k] = estado.contatos[k];
+  return JSON.stringify({ ...estado, contatos, parcial: chaves.length }, null, 2);
+}
+
+function nomeParcial(quantos) {
+  return `lembra-${quantos}-contatos-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+function entrarNaSelecao() {
+  selecionando = true;
+  selecionados.clear();
+  pintarContatos();
+}
+
+function sairDaSelecao() {
+  selecionando = false;
+  selecionados.clear();
+  pintarContatos();
+}
+
+function alternarSelecao(k) {
+  if (selecionados.has(k)) selecionados.delete(k);
+  else selecionados.add(k);
+  pintarContatos();
+}
+
+/** Marca o que o filtro deixou à vista — é assim que se escolhe "todos os que responderam". */
+function marcarVisiveis() {
+  const faltam = visiveis.some((k) => !selecionados.has(k));
+  visiveis.forEach((k) => (faltam ? selecionados.add(k) : selecionados.delete(k)));
+  pintarContatos();
+}
+
+async function enviarEscolhidos() {
+  const chaves = [...selecionados];
+  if (!chaves.length) return avisar("Nenhum contato escolhido.");
+
+  const conteudo = conteudoParcial(chaves);
+  const foi = await mandarArquivo(nomeParcial(chaves.length), conteudo,
+    "application/json", `${chaves.length} contatos do Lembra`);
+
+  // De propósito: cópia parcial NÃO conta como cópia de segurança. Carimbar a
+  // data aqui faria o app parar de cobrar enquanto o resto continua sem cópia.
+  if (foi) {
+    avisar(`${chaves.length} ${chaves.length === 1 ? "contato enviado" : "contatos enviados"}. Isso não substitui a cópia inteira.`);
+    sairDaSelecao();
+  }
+}
+
+function pintarBarraSelecao() {
+  $("#barra-selecao").classList.toggle("oculto", !selecionando);
+  $("#escolher-contatos").classList.toggle("oculto", selecionando);
+  if (!selecionando) return;
+
+  const n = selecionados.size;
+  $("#selecao-contagem").textContent = n
+    ? `${n} ${n === 1 ? "escolhido" : "escolhidos"}`
+    : "toque nos contatos";
+  $("#marcar-visiveis").textContent =
+    visiveis.some((k) => !selecionados.has(k))
+      ? `Marcar os ${visiveis.length} à vista`
+      : "Desmarcar os que estão à vista";
+  $("#enviar-escolhidos").disabled = !n;
 }
 
 // --------------------------------------------------------------- ficha
@@ -1434,19 +1538,11 @@ function pintarCobrancaDaCopia() {
  * conversa — que é onde a cópia realmente sobrevive à troca de aparelho.
  */
 async function enviarCopia() {
-  const arquivo = new File([conteudoDaCopia()], nomeDaCopia(), { type: "application/json" });
-  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
-    try {
-      await navigator.share({ files: [arquivo], title: "Cópia do Lembra" });
-      marcarCopiaFeita();
-      avisar("Cópia enviada.");
-    } catch (e) {
-      // o usuário fechou a folha; não é erro
-    }
-    return;
-  }
-  baixarCopia();
-  avisar("Este aparelho não abre a folha de compartilhar. O arquivo foi baixado.");
+  const foi = await mandarArquivo(nomeDaCopia(), conteudoDaCopia(),
+    "application/json", "Cópia do Lembra");
+  if (!foi) return;
+  marcarCopiaFeita();
+  avisar("Cópia enviada.");
 }
 
 function baixarCopia() {
@@ -1798,6 +1894,7 @@ function irPara(tela) {
   $$(".aba").forEach((b) => b.classList.toggle("ativa", b.dataset.tela === tela));
   window.scrollTo(0, 0);
   if (tela === "fila") pintarFila();
+  if (tela !== "contatos" && selecionando) sairDaSelecao();
   if (tela === "contatos") pintarContatos();
   if (tela === "ajustes") {
     pintarModelos(); pintarPecas(); pintarEstadoCopia(); pintarConta(); pintarDiagnostico();
@@ -1875,8 +1972,15 @@ function ligar() {
   });
   $("#contatos-lista").addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-contato]");
-    if (b) abrirFicha(b.dataset.contato);
+    if (!b) return;
+    if (selecionando) alternarSelecao(b.dataset.contato);
+    else abrirFicha(b.dataset.contato);
   });
+
+  $("#escolher-contatos").addEventListener("click", entrarNaSelecao);
+  $("#cancelar-selecao").addEventListener("click", sairDaSelecao);
+  $("#marcar-visiveis").addEventListener("click", marcarVisiveis);
+  $("#enviar-escolhidos").addEventListener("click", enviarEscolhidos);
   $("#modelos-lista").addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-modelo]");
     if (b) editarModelo(b.dataset.modelo);
@@ -2120,14 +2224,36 @@ function ligar() {
     const leitor = new FileReader();
     leitor.onload = () => {
       try {
-        const lido = estruturar(JSON.parse(String(leitor.result)));
+        const cru = JSON.parse(String(leitor.result));
+        const lido = estruturar(cru);
         const quantos = Object.keys(lido.contatos).length;
-        if (!confirm(`Restaurar ${quantos} contatos?\n\nO que está aqui agora será substituído.`)) return;
-        estado = lido;
+        const aqui = Object.keys(estado.contatos).length;
+
+        if (!aqui) {
+          // Aparelho vazio: não há o que perder, e juntar com nada é o mesmo
+          // que restaurar. Perguntar aqui só atrapalharia quem trocou de celular.
+          if (!confirm(`Trazer ${quantos} contatos desta cópia?`)) return;
+          estado = lido;
+        } else if (cru.parcial) {
+          // Arquivo com só alguns contatos nunca substitui: se substituísse,
+          // mandar cinco contatos apagaria os outros oitocentos.
+          if (!confirm(`Esta cópia tem só ${quantos} ${quantos === 1 ? "contato" : "contatos"}.\n\n` +
+            `Vou JUNTAR com os ${aqui} que já estão aqui. Nada se perde.`)) return;
+          estado = estruturar(mesclarEstados(estado, lido));
+        } else if (confirm(`Esta cópia tem ${quantos} contatos. Neste aparelho há ${aqui}.\n\n` +
+          `OK para JUNTAR os dois — nada se perde.\n` +
+          `Cancelar para ver a outra opção.`)) {
+          estado = estruturar(mesclarEstados(estado, lido));
+        } else if (confirm(`Então SUBSTITUIR tudo por esta cópia?\n\n` +
+          `Os ${aqui} contatos deste aparelho serão apagados, e não voltam.`)) {
+          estado = lido;
+        } else {
+          return;
+        }
         guardar();
         iniciarCampos();
         pintarTudo();
-        avisar("Cópia restaurada.");
+        avisar("Pronto: " + Object.keys(estado.contatos).length + " contatos aqui.");
       } catch (e) {
         avisar("Esse arquivo não é uma cópia do Lembra.");
       }

@@ -175,6 +175,21 @@
       <button class="chip" data-f="NAO_PERTURBE">Não perturbe</button>
     </div>
     <button id="trazer-agenda" class="secundario oculto">Trazer vários da agenda do celular</button>
+
+    <!-- Escolher e mandar só alguns. Os filtros de cima fazem metade do
+         trabalho: filtra "responderam" e marca todos os que ficaram à vista. -->
+    <button id="escolher-contatos" class="secundario">Escolher contatos para enviar</button>
+
+    <div id="barra-selecao" class="barra-selecao oculto">
+      <div class="linha-selecao">
+        <p class="dica" id="selecao-contagem"></p>
+        <button id="marcar-visiveis" class="secundario curto"></button>
+      </div>
+      <div class="linha-selecao">
+        <button id="cancelar-selecao" class="secundario">Cancelar</button>
+        <button id="enviar-escolhidos" class="principal">Enviar</button>
+      </div>
+    </div>
     <div id="contatos-lista" class="lista"></div>
   </div>
 </section>
@@ -304,6 +319,10 @@
       Restaurar cópia
       <input id="importar" type="file" accept="application/json,.json" hidden>
     </label>
+    <p class="dica">Se já houver contatos aqui, ele pergunta se é para
+       <b>juntar</b> ou <b>substituir</b>. Juntar não perde nada dos dois lados —
+       o histórico só é acrescentado, então dá para unir dois aparelhos sem
+       escolher um vencedor. Arquivo com só alguns contatos sempre junta.</p>
     <p class="dica" id="estado-guarda"></p>
 
     <h2 class="perigo">Zona de risco</h2>
