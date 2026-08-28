@@ -72,6 +72,7 @@ let estado = carregar();
 let chaveAtual = null;    // contato em foco na tela de discar
 let chaveFicha = null;    // contato aberto na ficha
 let previaEditada = false;   // o texto foi ajustado à mão e não deve ser refeito
+let modeloEmEdicao = null;   // id do modelo aberto no editor dos Ajustes
 let filtroAtual = "TODOS";
 
 function carregar() {
@@ -598,17 +599,21 @@ function pintarDiscagem() {
   atualizarPrevia();
 }
 
-function montarTexto() {
-  const m = estado.modelos.find((x) => x.id === $("#modelo").value) || estado.modelos[0];
-  if (!m) return "";
-  const nome = ($("#nome").value || "").trim();
-  return m.texto
+/** Troca os marcadores pelo que eles valem na hora de mandar. */
+function renderizar(texto, nome) {
+  return String(texto || "")
     .replaceAll("{saudacao}", saudacao())
-    .replaceAll("{nome}", nome || "tudo bem")
+    .replaceAll("{nome}", (nome || "").trim() || "tudo bem")
     .replaceAll("{eu}", estado.eu.nome || "…")
     .replaceAll("{instituicao}", estado.eu.instituicao || "…")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function montarTexto() {
+  const m = estado.modelos.find((x) => x.id === $("#modelo").value) || estado.modelos[0];
+  if (!m) return "";
+  return renderizar(m.texto, $("#nome").value);
 }
 
 /** Nome e benefício digitados na tela de discar, aplicados ao contato. */
@@ -668,10 +673,13 @@ function atualizarPrevia() {
 }
 
 /** A caixa cresce com o texto: mensagem cortada não dá para conferir. */
-function esticarPrevia() {
-  const el = $("#previa");
+function esticar(el, minimo) {
   el.style.height = "auto";
-  el.style.height = Math.max(el.scrollHeight, 92) + "px";
+  el.style.height = Math.max(el.scrollHeight, minimo || 92) + "px";
+}
+
+function esticarPrevia() {
+  esticar($("#previa"), 92);
 }
 
 /** O que vai para o WhatsApp: o que está escrito, e não o que o modelo diria. */
@@ -1607,26 +1615,67 @@ function pintarModelos() {
   }).join("");
 }
 
+/**
+ * O editor de modelo. Antes eram dois prompt() do navegador, que mostram o
+ * texto numa caixa de uma linha — dá para digitar, não dá para ler. Modelo que
+ * não se lê inteiro não se corrige, e corrigir é o que se faz com modelo.
+ */
 function editarModelo(id) {
   const m = estado.modelos.find((x) => x.id === id);
   if (!m) return;
-  const titulo = prompt("Nome do modelo:", m.titulo);
-  if (titulo === null) return;
-  const texto = prompt(
-    "Texto da mensagem.\n\nUse {nome}, {eu}, {instituicao} e {saudacao}.\n" +
-    "Deixe em branco para apagar o modelo.", m.texto);
-  if (texto === null) return;
 
-  if (!texto.trim()) {
-    if (estado.modelos.length === 1) return avisar("Precisa sobrar pelo menos um modelo.");
-    estado.modelos = estado.modelos.filter((x) => x.id !== id);
-  } else {
-    m.titulo = titulo.trim() || m.titulo;
-    m.texto = texto.trim();
-  }
+  modeloEmEdicao = id;
+  $("#modelo-titulo").value = m.titulo;
+  $("#modelo-texto").value = m.texto;
+  $("#editor-modelo").classList.remove("oculto");
+  $("#novo-modelo").classList.add("oculto");
+  // Apagar só faz sentido quando sobra outro: sem modelo nenhum não há mensagem.
+  $("#apagar-modelo").classList.toggle("oculto", estado.modelos.length <= 1);
+
+  pintarExemploDoModelo();
+  esticar($("#modelo-texto"), 120);
+  $("#editor-modelo").scrollIntoView({ block: "center" });
+}
+
+/** Como a mensagem fica depois de trocados os marcadores. */
+function pintarExemploDoModelo() {
+  $("#modelo-exemplo").textContent = renderizar($("#modelo-texto").value, "Maria");
+}
+
+function fecharEditorDeModelo() {
+  modeloEmEdicao = null;
+  $("#editor-modelo").classList.add("oculto");
+  $("#novo-modelo").classList.remove("oculto");
+}
+
+function salvarModeloEditado() {
+  const m = estado.modelos.find((x) => x.id === modeloEmEdicao);
+  if (!m) return fecharEditorDeModelo();
+
+  const texto = $("#modelo-texto").value.trim();
+  if (!texto) return avisar("A mensagem não pode ficar vazia.");
+
+  m.titulo = $("#modelo-titulo").value.trim() || m.titulo;
+  m.texto = texto;
   guardar();
+  fecharEditorDeModelo();
   pintarModelos();
   pintarDiscagem();
+  avisar("Modelo salvo.");
+}
+
+function apagarModeloEditado() {
+  const m = estado.modelos.find((x) => x.id === modeloEmEdicao);
+  if (!m) return;
+  if (estado.modelos.length <= 1) return avisar("Precisa sobrar pelo menos um modelo.");
+  if (!confirm("Apagar o modelo \"" + m.titulo + "\"?")) return;
+
+  estado.modelos = estado.modelos.filter((x) => x.id !== modeloEmEdicao);
+  guardar();
+  fecharEditorDeModelo();
+  pintarModelos();
+  pintarDiscagem();
+  avisar("Modelo apagado.");
 }
 
 // ------------------------------------------------------------- navegação
@@ -1636,6 +1685,7 @@ function irPara(tela) {
   $$(".aba").forEach((b) => b.classList.toggle("ativa", b.dataset.tela === tela));
   window.scrollTo(0, 0);
   if (tela === "fila") pintarFila();
+  if (tela !== "ajustes" && modeloEmEdicao) fecharEditorDeModelo();
   if (tela !== "contatos" && selecionando) sairDaSelecao();
   if (tela === "contatos") pintarContatos();
   if (tela === "ajustes") {
@@ -1893,6 +1943,14 @@ function ligar() {
   };
   ["#regua-1", "#regua-2", "#regua-r"].forEach((s) =>
     $(s).addEventListener("change", salvarRegua));
+
+  $("#modelo-texto").addEventListener("input", () => {
+    pintarExemploDoModelo();
+    esticar($("#modelo-texto"), 120);
+  });
+  $("#salvar-modelo").addEventListener("click", salvarModeloEditado);
+  $("#apagar-modelo").addEventListener("click", apagarModeloEditado);
+  $("#fechar-editor").addEventListener("click", fecharEditorDeModelo);
 
   $("#novo-modelo").addEventListener("click", () => {
     const id = "m" + Date.now().toString(36);

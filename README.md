@@ -119,6 +119,17 @@ desfaz sozinho. Digitar o nome depois de ajustar, porém, **não** apaga o que
 você escreveu — a partir do momento em que alguém mexe no texto, é a mão de
 quem escreveu que manda.
 
+### Editar um modelo
+
+Tocar num modelo nos Ajustes abre o editor ali mesmo: nome, texto inteiro numa
+caixa que cresce com o conteúdo, e um **"assim vai ficar"** logo abaixo,
+mostrando a mensagem com os marcadores já trocados. Salvar, cancelar e apagar
+são botões — e apagar só aparece quando sobra outro modelo.
+
+Antes eram dois `prompt()` do navegador. Dá para digitar num prompt; não dá
+para ler. E modelo que não se lê inteiro não se corrige, que é justamente o que
+se faz com modelo depois de ver a taxa de resposta dele.
+
 ## A régua
 
 | Situação | Quando procurar de novo |

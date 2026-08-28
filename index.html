@@ -234,6 +234,32 @@
     <h2>Modelos de mensagem</h2>
     <div id="modelos-lista" class="lista"></div>
     <button id="novo-modelo" class="secundario">Criar modelo</button>
+
+    <!-- O editor mora aqui dentro em vez de numa janelinha do navegador: o
+         prompt() mostra o texto numa caixa de uma linha, e modelo que não se
+         lê inteiro não se corrige. -->
+    <div id="editor-modelo" class="editor oculto">
+      <label class="campo">
+        <span class="rotulo">Nome do modelo</span>
+        <input id="modelo-titulo" type="text" autocomplete="off">
+      </label>
+
+      <label class="campo">
+        <span class="rotulo">Texto da mensagem</span>
+        <textarea id="modelo-texto" class="previa" rows="5"></textarea>
+      </label>
+
+      <p class="dica">Use <code>{nome}</code>, <code>{eu}</code>,
+         <code>{instituicao}</code> e <code>{saudacao}</code> — são trocados na
+         hora de mandar.</p>
+
+      <span class="rotulo">Assim vai ficar</span>
+      <p id="modelo-exemplo" class="exemplo"></p>
+
+      <button id="salvar-modelo" class="principal">Salvar modelo</button>
+      <button id="fechar-editor" class="secundario">Cancelar</button>
+      <button id="apagar-modelo" class="perigoso">Apagar este modelo</button>
+    </div>
     <p class="dica">A taxa de resposta de cada modelo aparece na lista. É o número que
        mais vale aqui dentro: troque o texto que responde pouco.</p>
 
