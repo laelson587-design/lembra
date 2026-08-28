@@ -237,12 +237,18 @@ function mesclarContato(a, b) {
   const donoBen = new Date(a.beneficioEm || 0) >= new Date(b.beneficioEm || 0) ? a : b;
   const outroBen = donoBen === a ? b : a;
 
+  // O CPF segue a mesma regra do benefício, com carimbo próprio.
+  const donoCpf = new Date(a.cpfEm || 0) >= new Date(b.cpfEm || 0) ? a : b;
+  const outroCpf = donoCpf === a ? b : a;
+
   return {
     numero: (a.numero || "").length >= (b.numero || "").length ? a.numero : b.numero,
     nome: a.nome || b.nome || "",
     criadoEm: new Date(a.criadoEm) <= new Date(b.criadoEm) ? a.criadoEm : b.criadoEm,
     status: situacaoPorEventos(eventos),
     voltarEm: retornoPorEventos(eventos, maisNovo.voltarEm),
+    cpf: (donoCpf.cpfEm ? donoCpf.cpf : null) || outroCpf.cpf || null,
+    cpfEm: donoCpf.cpfEm || outroCpf.cpfEm || null,
     beneficio: (donoBen.beneficioEm ? donoBen.beneficio : null) || outroBen.beneficio || null,
     beneficioEm: donoBen.beneficioEm || outroBen.beneficioEm || null,
     eventos,

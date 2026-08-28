@@ -78,7 +78,12 @@
     <!-- Dobrado por padrão: quem está com pressa não abre, e quem precisa do
          número do benefício acha na hora de cadastrar. -->
     <details class="bloco oculto" id="campo-beneficio">
-      <summary>Dados do benefício</summary>
+      <summary>Dados do cliente</summary>
+      <label class="campo">
+        <span class="rotulo">CPF</span>
+        <input id="cpf" type="text" inputmode="numeric"
+               placeholder="000.000.000-00" autocomplete="off">
+      </label>
       <label class="campo">
         <span class="rotulo">Número do benefício</span>
         <input id="beneficio-numero" type="text" inputmode="numeric"
@@ -88,7 +93,8 @@
         <span class="rotulo">Tipo de benefício</span>
         <select id="beneficio-tipo"></select>
       </label>
-      <p class="dica">Fica guardado com o contato, neste aparelho — e entra na
+      <p class="dica">O CPF é conferido pelos dígitos: se estiver errado, o app
+         avisa e não guarda. Tudo fica com o contato neste aparelho — e entra na
          cópia de segurança que você mandar para fora.</p>
     </details>
 
@@ -334,7 +340,12 @@
       <input id="ficha-editar-nome" type="text" autocomplete="off">
     </label>
 
-    <h3>Benefício</h3>
+    <h3>Dados do cliente</h3>
+    <label class="campo">
+      <span class="rotulo">CPF</span>
+      <input id="ficha-cpf" type="text" inputmode="numeric"
+             placeholder="000.000.000-00" autocomplete="off">
+    </label>
     <label class="campo">
       <span class="rotulo">Número do benefício</span>
       <input id="ficha-beneficio-numero" type="text" inputmode="numeric"

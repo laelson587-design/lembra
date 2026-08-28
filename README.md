@@ -65,7 +65,7 @@ você decidir chamar.
 **Hoje** — a fila do dia pela régua de contato: só quem está no prazo. De 800
 nomes costumam sobrar poucas dezenas. Mandar menos é o que faz o chip durar.
 
-**Contatos** — busca por nome, número, número do benefício ou tipo de benefício,
+**Contatos** — busca por nome, telefone, CPF, número do benefício ou tipo,
 com filtros de quem respondeu, quem nunca respondeu e quem pediu para parar.
 
 **Ficha** — histórico completo, anotações, a conversa guardada e os dados do
@@ -76,20 +76,32 @@ pessoa sem deixar você falar com ela.
 **Ajustes** — seu nome, a régua, os modelos de mensagem com **taxa de resposta
 de cada um**, e a cópia de segurança.
 
-## Benefício
+## Dados do cliente
 
-Cada contato guarda, além do nome, o **número do benefício** e o **tipo**
+Além do nome, cada contato guarda **CPF**, **número do benefício** e **tipo**
 (aposentadoria por idade, pensão por morte, BPC/LOAS e o resto da lista). Os
-dois são opcionais e podem ser preenchidos na hora de cadastrar ou depois, na
-ficha.
+três são opcionais, ficam num bloco dobrado na tela de Discar e podem ser
+preenchidos na hora de cadastrar ou depois, na ficha. Todos entram na busca.
 
-O número é **formatado, nunca recusado**: lista de trabalho vem com número
-truncado e com número antigo, e barrar a digitação faria a pessoa desistir de
-anotar. Número meio certo ainda acha a pessoa na busca; número nenhum não acha.
+### Um é conferido, o outro não — e é de propósito
 
-Vale saber o que isso muda na cópia de segurança: com número de benefício, o
-arquivo que você manda para o Drive ou para o e-mail passa a **identificar a
-pessoa por inteiro**. Guarde-o como você guardaria a lista impressa.
+**O CPF é conferido.** Os dois últimos dígitos são calculados a partir dos nove
+primeiros, então dá para saber se está errado sem perguntar a ninguém. CPF
+errado é pior que CPF vazio: ele não avisa que está errado, só some da busca no
+dia em que a pessoa for procurada. Então o app confere, avisa e **não guarda** —
+o resto do cadastro é gravado do mesmo jeito, só o CPF fica de fora.
+
+**O número do benefício é formatado, nunca recusado.** Ele não tem como ser
+conferido sozinho, e lista de trabalho vem com número truncado e com número
+antigo. Barrar a digitação faria a pessoa desistir de anotar, e número meio
+certo ainda acha alguém na busca — número nenhum não acha.
+
+### O que isso muda na cópia
+
+Com CPF e benefício, o arquivo que você manda para o Drive ou para o e-mail
+passa a **identificar a pessoa por inteiro**. O mesmo vale para a conversa
+exportada, que leva o CPF no cabeçalho. Guarde esses arquivos como você
+guardaria a lista impressa.
 
 ## A régua
 

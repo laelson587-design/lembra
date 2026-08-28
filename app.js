@@ -284,6 +284,8 @@ function criar(bruto, nome) {
     criadoEm: new Date().toISOString(),
     status: "ABERTO",
     voltarEm: null,
+    cpf: null,
+    cpfEm: null,
     beneficio: null,
     beneficioEm: null,
     eventos: [],
@@ -318,6 +320,78 @@ function anotarBeneficio(c, numeroBruto, tipo) {
     texto: resumoBeneficio(c) || "Dados do benefício apagados",
   });
   return true;
+}
+
+/**
+ * O CPF é o único dado aqui que se pode conferir sozinho, e por isso ele é
+ * conferido: os dois últimos dígitos são calculados a partir dos nove
+ * primeiros. CPF errado é pior que CPF vazio — ele não avisa que está errado,
+ * só some da busca no dia em que a pessoa for procurada.
+ */
+function cpfValido(bruto) {
+  const d = soDigitos(bruto);
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false;   // 111.111.111-11 e parentes passam na conta
+
+  for (let corte = 9; corte <= 10; corte++) {
+    let soma = 0;
+    for (let i = 0; i < corte; i++) soma += Number(d[i]) * (corte + 1 - i);
+    let dv = (soma * 10) % 11;
+    if (dv === 10) dv = 0;
+    if (dv !== Number(d[corte])) return false;
+  }
+  return true;
+}
+
+function cpfBonito(bruto) {
+  const d = soDigitos(bruto);
+  if (d.length === 11) {
+    return d.slice(0, 3) + "." + d.slice(3, 6) + "." + d.slice(6, 9) + "-" + d.slice(9);
+  }
+  return String(bruto || "").trim();
+}
+
+/**
+ * Guarda o CPF. Como o benefício, é ajuste e não evento: entre dois aparelhos
+ * vence quem mexeu por último, pelo carimbo `cpfEm`.
+ *
+ * Devolve o que aconteceu, porque quem chama precisa saber se avisa ou não:
+ * "igual", "gravado", "apagado", "invalido" ou "incompleto".
+ */
+function anotarCpf(c, bruto) {
+  const d = soDigitos(bruto);
+  const antes = soDigitos(c.cpf);
+
+  if (d === antes) return "igual";
+  if (!d) {
+    c.cpf = null;
+    c.cpfEm = new Date().toISOString();
+    registrar(c, "CPF", { texto: "CPF apagado" });
+    return "apagado";
+  }
+  if (d.length < 11) return "incompleto";
+  if (!cpfValido(d)) return "invalido";
+
+  c.cpf = d;
+  c.cpfEm = new Date().toISOString();
+  registrar(c, "CPF", { texto: cpfBonito(d) });
+  return "gravado";
+}
+
+/** O aviso certo para cada desfecho de anotarCpf(). Vazio = não precisa avisar. */
+function recadoDoCpf(desfecho) {
+  if (desfecho === "invalido") return "Esse CPF não confere. Não guardei — confira os dígitos.";
+  if (desfecho === "incompleto") return "CPF incompleto. Não guardei.";
+  return "";
+}
+
+/** CPF e benefício juntos, para a linha de identificação da ficha. */
+function resumoDoCliente(c) {
+  const partes = [];
+  if (c && c.cpf) partes.push("CPF " + cpfBonito(c.cpf));
+  const b = resumoBeneficio(c);
+  if (b) partes.push(b);
+  return partes.join(" · ");
 }
 
 function registrar(c, tipo, extra = {}) {
@@ -490,11 +564,12 @@ function pintarDiscagem() {
   if (k !== chaveAtual) {
     $("#nome").value = c ? c.nome || "" : "";
     const b = beneficioDe(c);
+    $("#cpf").value = c && c.cpf ? cpfBonito(c.cpf) : "";
     $("#beneficio-numero").value = b.numero ? beneficioBonito(b.numero) : "";
     $("#beneficio-tipo").value = b.tipo || "";
-    // Quem já tem benefício anotado vê na hora; quem não tem não perde a tela
-    // com um campo que não vai preencher agora.
-    $("#campo-beneficio").open = !!(b.numero || b.tipo);
+    // Quem já tem dado anotado vê na hora; quem não tem não perde a tela
+    // com campos que não vai preencher agora.
+    $("#campo-beneficio").open = !!((c && c.cpf) || b.numero || b.tipo);
   }
   chaveAtual = k;
 
@@ -537,7 +612,17 @@ function montarTexto() {
 function aplicarCamposDaDiscagem(c) {
   const nome = ($("#nome").value || "").trim();
   if (nome) c.nome = nome;
-  return anotarBeneficio(c, $("#beneficio-numero").value, $("#beneficio-tipo").value);
+
+  // CPF errado não derruba o resto: nome e benefício são gravados do mesmo
+  // jeito. O aviso não sai daqui — quem chama é que decide, senão o recado
+  // genérico de "guardado" apagaria o do CPF meio segundo depois.
+  const doCpf = anotarCpf(c, $("#cpf").value);
+  const mexeuBeneficio = anotarBeneficio(c, $("#beneficio-numero").value, $("#beneficio-tipo").value);
+
+  return {
+    mexeu: mexeuBeneficio || doCpf === "gravado" || doCpf === "apagado",
+    recadoCpf: recadoDoCpf(doCpf),
+  };
 }
 
 /**
@@ -553,15 +638,18 @@ function guardarSemMandar() {
   let c = achar(bruto);
   const jaEra = !!c;
   if (!c) c = criar(bruto, $("#nome").value);
-  const mexeu = aplicarCamposDaDiscagem(c);
+  const r = aplicarCamposDaDiscagem(c);
   if (!guardar()) return;
 
   pintarDiscagem();
   pintarFila();
   pintarContatos();
-  avisar(!jaEra ? "Contato guardado, sem mandar nada."
-    : mexeu ? "Contato atualizado."
-    : "Este contato já estava guardado.");
+
+  // O problema no CPF tem prioridade: guardar é o esperado, o CPF recusado
+  // é a surpresa, e é ela que precisa aparecer.
+  avisar(r.recadoCpf || (!jaEra ? "Contato guardado, sem mandar nada."
+    : r.mexeu ? "Contato atualizado."
+    : "Este contato já estava guardado."));
 }
 
 function abrirConversa() {
@@ -576,7 +664,8 @@ function abrirConversa() {
     if (!confirm("Esta pessoa pediu para não receber mais mensagens.\n\nMandar assim mesmo?")) return;
   }
 
-  aplicarCamposDaDiscagem(c);
+  const recadoCpf = aplicarCamposDaDiscagem(c).recadoCpf;
+  if (recadoCpf) avisar(recadoCpf);
 
   const modeloId = $("#modelo").value;
   const texto = montarTexto();
@@ -748,6 +837,7 @@ function pintarContatos() {
     const b = beneficioDe(c);
     return digitos
       ? c.numero.includes(busca) || b.numero.includes(busca)
+        || soDigitos(c.cpf).includes(busca)
       : (c.nome || "").toLowerCase().includes(busca)
         || b.tipo.toLowerCase().includes(busca);
   });
@@ -904,6 +994,7 @@ const ROTULO_EVENTO = {
   CONVERSA: "Conversa guardada",
   IMPORTADO: "Histórico importado do WhatsApp",
   BENEFICIO: "Dados do benefício",
+  CPF: "CPF anotado",
 };
 
 function abrirFicha(k) {
@@ -916,9 +1007,10 @@ function abrirFicha(k) {
   $("#ficha-editar-nome").value = c.nome || "";
 
   const b = beneficioDe(c);
+  $("#ficha-cpf").value = c.cpf ? cpfBonito(c.cpf) : "";
   $("#ficha-beneficio-numero").value = b.numero ? beneficioBonito(b.numero) : "";
   $("#ficha-beneficio-tipo").value = b.tipo || "";
-  const resumo = resumoBeneficio(c);
+  const resumo = resumoDoCliente(c);
   $("#ficha-beneficio-resumo").textContent = resumo;
   $("#ficha-beneficio-resumo").classList.toggle("oculto", !resumo);
 
@@ -1007,6 +1099,7 @@ function textoDaFicha(c) {
     "Lembra — histórico de " + (c.nome || bonito(c.numero)),
     "Telefone: " + bonito(c.numero),
   ];
+  if (c.cpf) linhas.push("CPF: " + cpfBonito(c.cpf));
   const b = resumoBeneficio(c);
   if (b) linhas.push("Benefício: " + b);
   linhas.push("Exportado em " + dataHora(new Date().toISOString()));
@@ -1539,6 +1632,12 @@ function ligar() {
   $("#beneficio-numero").addEventListener("blur", () => {
     $("#beneficio-numero").value = beneficioBonito($("#beneficio-numero").value);
   });
+  $("#cpf").addEventListener("blur", () => {
+    const el = $("#cpf");
+    if (soDigitos(el.value).length !== 11) return;
+    if (!cpfValido(el.value)) return avisar("Esse CPF não confere. Confira os dígitos.");
+    el.value = cpfBonito(el.value);
+  });
   $("#ver-ficha").addEventListener("click", () => chaveAtual && abrirFicha(chaveAtual));
 
   $$("#desfecho .resultado").forEach((b) =>
@@ -1626,6 +1725,18 @@ function ligar() {
     c.nome = $("#ficha-editar-nome").value.trim();
     guardar();
     $("#ficha-nome").textContent = c.nome || "Sem nome";
+  });
+
+  $("#ficha-cpf").addEventListener("change", () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    const desfecho = anotarCpf(c, $("#ficha-cpf").value);
+    const recado = recadoDoCpf(desfecho);
+    if (recado) return avisar(recado);
+    if (desfecho === "igual") return;
+    guardar();
+    abrirFicha(chaveFicha);
+    avisar(desfecho === "apagado" ? "CPF apagado." : "CPF anotado.");
   });
 
   const salvarBeneficioDaFicha = () => {
