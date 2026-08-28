@@ -1,4 +1,4 @@
-/* Lembra — a memória que o WhatsApp não guarda.
+/* Tino — a memória que o WhatsApp não guarda.
  *
  * A ideia inteira cabe numa frase: você já digita o número em algum lugar
  * antes de mandar mensagem. Se digitar aqui, o app abre a conversa para você
@@ -12,6 +12,8 @@
 
 "use strict";
 
+/* O app virou Tino, a chave não: ela é o endereço dos dados no aparelho, e
+   trocá-la apagaria os contatos de quem já usa. Nome antigo, dados intactos. */
 const CHAVE = "lembra.v1";
 
 const MODELOS_PADRAO = [
@@ -61,6 +63,7 @@ const PADRAO = {
   modelos: MODELOS_PADRAO,
   contatos: {},
   copiaEm: null,     // quando a última cópia de segurança foi tirada
+  copiaComData: false,  // nome com a data (guarda várias) ou nome fixo (substitui)
   aberturas: 0,      // quantas vezes o app abriu: mede se o navegador apaga
   desde: null,       // data da primeira abertura que sobreviveu
   ajustadoEm: null,  // última mexida nos ajustes, para a sincronia desempatar
@@ -96,6 +99,7 @@ function estruturar(d) {
     modelos: Array.isArray(d.modelos) && d.modelos.length ? d.modelos : MODELOS_PADRAO,
     contatos: d.contatos || {},
     copiaEm: d.copiaEm || null,
+    copiaComData: !!d.copiaComData,
     aberturas: Number(d.aberturas) || 0,
     desde: d.desde || null,
     ajustadoEm: d.ajustadoEm || null,
@@ -954,7 +958,7 @@ function conteudoParcial(chaves) {
 }
 
 function nomeParcial(quantos) {
-  return `lembra-${quantos}-contatos-${new Date().toISOString().slice(0, 10)}.json`;
+  return `Tino - ${quantos} contatos ${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 function entrarNaSelecao() {
@@ -988,7 +992,7 @@ async function enviarEscolhidos() {
 
   const conteudo = conteudoParcial(chaves);
   const foi = await mandarArquivo(nomeParcial(chaves.length), conteudo,
-    "application/json", `${chaves.length} contatos do Lembra`);
+    "application/json", `${chaves.length} contatos do Tino`);
 
   // De propósito: cópia parcial NÃO conta como cópia de segurança. Carimbar a
   // data aqui faria o app parar de cobrar enquanto o resto continua sem cópia.
@@ -1126,12 +1130,12 @@ function lerExportacao(cru) {
 
 /**
  * Dentro do app a conversa é a prova do que ficou combinado; fora dele é o que
- * sobrevive ao aparelho, ao chip e ao próprio Lembra. Sai em texto puro de
+ * sobrevive ao aparelho, ao chip e ao próprio Tino. Sai em texto puro de
  * propósito: abre em qualquer coisa, hoje e daqui a dez anos.
  */
 function textoDaFicha(c) {
   const linhas = [
-    "Lembra — histórico de " + (c.nome || bonito(c.numero)),
+    "Tino — histórico de " + (c.nome || bonito(c.numero)),
     "Telefone: " + bonito(c.numero),
   ];
   if (c.cpf) linhas.push("CPF: " + cpfBonito(c.cpf));
@@ -1155,7 +1159,7 @@ function textoDaFicha(c) {
 function nomeDoArquivoDaFicha(c) {
   const cru = (c.nome || c.numero).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const limpo = cru.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
-  return "conversa-" + (limpo || c.numero) + "-" + new Date().toISOString().slice(0, 10) + ".txt";
+  return "Tino - conversa " + (limpo || c.numero) + " " + new Date().toISOString().slice(0, 10) + ".txt";
 }
 
 async function exportarConversa() {
@@ -1468,8 +1472,19 @@ function conteudoDaCopia() {
    então encurtar o prazo não custa incômodo a mais. */
 const DIAS_ATE_COBRAR_COPIA = 7;
 
+/**
+ * Nome fixo por padrão, e não é detalhe: com a data no nome, cada envio vira um
+ * arquivo novo e em um mês são trinta cópias no Drive, das quais só a última
+ * presta. Com nome fixo, o celular pergunta se substitui e sobra uma cópia só,
+ * sempre atual. Quem quiser um histórico de versões liga a data nos Ajustes.
+ *
+ * O que o app NÃO controla: para onde o arquivo vai. Ele entrega à folha de
+ * compartilhar e quem decide é o Drive, o Arquivos ou o e-mail.
+ */
 function nomeDaCopia() {
-  return `lembra-${new Date().toISOString().slice(0, 10)}.json`;
+  const nome = "Tino - meus contatos";
+  if (!estado.copiaComData) return nome + ".json";
+  return `${nome} ${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 function marcarCopiaFeita() {
@@ -1538,7 +1553,7 @@ function pintarCobrancaDaCopia() {
  */
 async function enviarCopia() {
   const foi = await mandarArquivo(nomeDaCopia(), conteudoDaCopia(),
-    "application/json", "Cópia do Lembra");
+    "application/json", "Cópia do Tino");
   if (!foi) return;
   marcarCopiaFeita();
   avisar("Cópia enviada.");
@@ -2011,6 +2026,15 @@ function ligar() {
     avisar("Você saiu da conta.");
   });
 
+  $("#copia-com-data").addEventListener("change", () => {
+    estado.copiaComData = $("#copia-com-data").checked;
+    ajustesMexidos();
+    guardar();
+    avisar(estado.copiaComData
+      ? "Cada cópia vai levar a data no nome."
+      : "A cópia vai substituir a anterior.");
+  });
+
   $("#enviar-copia").addEventListener("click", enviarCopia);
   $("#copia-atrasada-botao").addEventListener("click", enviarCopia);
   $("#exportar").addEventListener("click", () => {
@@ -2063,7 +2087,7 @@ function ligar() {
         pintarTudo();
         avisar("Pronto: " + Object.keys(estado.contatos).length + " contatos aqui.");
       } catch (e) {
-        avisar("Esse arquivo não é uma cópia do Lembra.");
+        avisar("Esse arquivo não é uma cópia do Tino.");
       }
     };
     leitor.readAsText(arquivo);
@@ -2090,6 +2114,7 @@ function iniciarCampos() {
   $("#regua-2").value = estado.regua.dois;
   $("#regua-r").value = estado.regua.respondeu;
   $("#voltar-em").min = new Date().toISOString().slice(0, 10);
+  $("#copia-com-data").checked = !!estado.copiaComData;
   encherTipos("#beneficio-tipo");
   encherTipos("#ficha-beneficio-tipo");
 }

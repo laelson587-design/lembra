@@ -1,4 +1,4 @@
--- Banco do Lembra, para colar no SQL Editor da Supabase.
+-- Banco do Tino, para colar no SQL Editor da Supabase.
 --
 -- É uma tabela só: cada conta tem uma linha com o caderno inteiro em JSON.
 -- Parece grosseiro para quem está acostumado a normalizar tudo, e é a escolha

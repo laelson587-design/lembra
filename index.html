@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lembra</title>
+<title>Tino</title>
 <meta name="description" content="A memória dos seus contatos: quem você já chamou, quem nunca respondeu e quem pediu para parar.">
 <meta name="theme-color" content="#1d4ed8">
 <link rel="manifest" href="manifest.json">
@@ -16,7 +16,7 @@
 <!-- ======================= DISCAR ======================= -->
 <section id="tela-discar" class="tela ativa">
   <header class="cabecalho">
-    <h1>Lembra</h1>
+    <h1>Tino</h1>
     <span id="marca-dia" class="etiqueta"></span>
   </header>
 
@@ -35,7 +35,7 @@
     <div id="instalar" class="veredito pare oculto">
       <p class="titulo">Instale antes de usar</p>
       <p class="detalhe">No iPhone, o Safari <b>apaga os dados</b> de site que
-        fica só em aba. Enquanto o Lembra não estiver na Tela de Início, ele
+        fica só em aba. Enquanto o Tino não estiver na Tela de Início, ele
         vai esquecer tudo.</p>
       <ol class="passos">
         <li>Toque no botão <b>Compartilhar</b>, o quadradinho com a seta para cima,
@@ -324,6 +324,16 @@
     <p class="dica">A cada 7 dias, se tiver acontecido coisa nova, o app cobra a
        cópia na tela de Discar. Copiou e não trabalhou? Ele fica quieto.</p>
     <button id="exportar" class="secundario">Só baixar o arquivo</button>
+
+    <label class="opcao">
+      <input id="copia-com-data" type="checkbox">
+      <span>Guardar uma cópia por data</span>
+    </label>
+    <p class="dica">Desligado, o arquivo se chama sempre <code>Tino - meus contatos.json</code>:
+       ao salvar em Arquivos ou no iCloud Drive, o celular pergunta se substitui
+       a anterior e você fica com <b>uma cópia só, sempre atual</b>. Ligado, cada
+       cópia leva a data no nome e nenhuma substitui a outra. No e-mail e no
+       WhatsApp, cada envio é uma mensagem nova de qualquer jeito.</p>
     <label class="secundario arquivo">
       Restaurar cópia
       <input id="importar" type="file" accept="application/json,.json" hidden>
@@ -337,7 +347,7 @@
     <h2 class="perigo">Zona de risco</h2>
     <button id="apagar" class="perigoso">Apagar tudo</button>
 
-    <p class="rodape">Lembra · os dados nunca saem deste aparelho.</p>
+    <p class="rodape">Tino · os dados nunca saem deste aparelho.</p>
   </div>
 </section>
 

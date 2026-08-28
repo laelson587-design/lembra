@@ -279,6 +279,7 @@ function mesclarEstados(local, remoto) {
     modelos: dono.modelos,
     ajustadoEm: dono.ajustadoEm || null,
     contatos,
+    copiaComData: !!dono.copiaComData,
     copiaEm: [local.copiaEm, remoto.copiaEm].filter(Boolean).sort().pop() || null,
     aberturas: Math.max(Number(local.aberturas) || 0, Number(remoto.aberturas) || 0),
     desde: [local.desde, remoto.desde].filter(Boolean).sort()[0] || null,

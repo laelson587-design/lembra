@@ -1,4 +1,4 @@
-# Lembra
+# Tino
 
 A memória que o WhatsApp não guarda: quem você já chamou, quantas vezes, quem
 nunca respondeu e quem pediu para parar.
@@ -17,7 +17,7 @@ Piora quando a lista é compartilhada e **reinicia toda semana**: o histórico d
 contatos some, todo mundo trabalha os mesmos nomes de novo, e não há como saber
 quem já foi abordado. É desenhado para queimar número.
 
-O Lembra resolve a única parte que está na mão de quem usa: **a memória**.
+O Tino resolve a única parte que está na mão de quem usa: **a memória**.
 
 ## Como funciona
 
@@ -43,7 +43,7 @@ vez, conforme você trabalha. Em duas semanas de uso já são centenas.
 
 **Do WhatsApp, não.** Nenhuma página consegue ler as conversas nem os contatos
 do aplicativo — ele é fechado, e a única saída oficial é o "Exportar conversa",
-que o Lembra importa. O que lê o WhatsApp por fora são as bibliotecas que
+que o Tino importa. O que lê o WhatsApp por fora são as bibliotecas que
 imitam o WhatsApp Web, e são exatamente elas que derrubam o número.
 
 **Da agenda do celular, sim.** No Chrome do Android existe uma permissão do

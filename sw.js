@@ -1,4 +1,4 @@
-/* Service worker do Lembra.
+/* Service worker do Tino.
  *
  * Serve do cache para abrir sem internet, mas busca a versão nova por trás e
  * guarda para a próxima abertura ("stale-while-revalidate"). É de propósito:
@@ -9,7 +9,7 @@
  * Suba a VERSAO quando quiser forçar a limpeza imediata de todo mundo.
  */
 
-const VERSAO = "lembra-v11";
+const VERSAO = "tino-v1";
 
 const CASCA = [
   "./",
