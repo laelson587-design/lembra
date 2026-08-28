@@ -103,7 +103,16 @@
       <select id="modelo"></select>
     </label>
 
-    <div id="previa" class="previa oculto"></div>
+    <!-- A mensagem deixou de ser um rótulo cinza e virou o texto que vai
+         mesmo: tamanho de leitura, e editável. Quem quiser ajustar uma frase
+         para aquela pessoa ajusta aqui, e é isso que sai. -->
+    <div class="campo oculto" id="campo-previa">
+      <span class="rotulo">A mensagem
+        <button type="button" id="voltar-modelo" class="mini oculto">voltar ao modelo</button>
+      </span>
+      <textarea id="previa" class="previa" rows="4"
+                aria-label="A mensagem que será enviada"></textarea>
+    </div>
 
     <button id="abrir" class="principal oculto">Abrir conversa no WhatsApp</button>
 

@@ -208,11 +208,22 @@ button { font: inherit; cursor: pointer; }
 .passos li { margin-bottom: 6px; }
 .passos b { color: var(--texto); }
 
+/* A mensagem é para ser lida com calma antes de sair, então tem tamanho de
+   leitura e cor de texto de verdade — não de rodapé. Os 16px são piso: abaixo
+   disso o Safari dá zoom ao focar e a tela inteira pula. */
 .previa {
-  margin: 4px 0 14px; padding: 14px 16px;
-  background: var(--carta); border: 1px dashed var(--borda);
-  border-radius: var(--raio); font-size: 15px; color: var(--fraco);
-  white-space: pre-wrap;
+  display: block; width: 100%; margin: 0; padding: 14px 16px;
+  background: var(--carta); border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  font-family: inherit; font-size: 16px; line-height: 1.5; color: var(--texto);
+  resize: none; overflow: hidden;
+}
+.previa:focus { border-color: var(--marca); }
+
+.mini {
+  float: right; padding: 0; border: 0; background: transparent;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+  text-transform: none; color: var(--marca); text-decoration: underline;
 }
 
 .desfecho { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borda); }

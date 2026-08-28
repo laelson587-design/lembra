@@ -103,6 +103,22 @@ passa a **identificar a pessoa por inteiro**. O mesmo vale para a conversa
 exportada, que leva o CPF no cabeçalho. Guarde esses arquivos como você
 guardaria a lista impressa.
 
+## A mensagem antes de sair
+
+O modelo escreve a mensagem, mas quem manda é você — então ela aparece numa
+caixa de leitura, com tamanho de texto de verdade, **e pode ser editada**. Uma
+frase a mais para aquela pessoa, um "o senhor comentou que...", e é esse texto
+que vai para o WhatsApp e é esse que fica guardado no histórico.
+
+A caixa cresce com o texto: mensagem cortada não dá para conferir, e conferir
+antes de mandar é o ponto do app inteiro.
+
+Depois de mexer aparece um **voltar ao modelo**, que devolve o texto original.
+E o ajuste é daquela mensagem, não do modelo: trocar de modelo ou de pessoa
+desfaz sozinho. Digitar o nome depois de ajustar, porém, **não** apaga o que
+você escreveu — a partir do momento em que alguém mexe no texto, é a mão de
+quem escreveu que manda.
+
 ## A régua
 
 | Situação | Quando procurar de novo |

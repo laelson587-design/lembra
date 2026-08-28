@@ -71,6 +71,7 @@ const PADRAO = {
 let estado = carregar();
 let chaveAtual = null;    // contato em foco na tela de discar
 let chaveFicha = null;    // contato aberto na ficha
+let previaEditada = false;   // o texto foi ajustado à mão e não deve ser refeito
 let filtroAtual = "TODOS";
 
 function carregar() {
@@ -549,7 +550,7 @@ function pintarDiscagem() {
 
   if (!ok) {
     chaveAtual = null;
-    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#previa",
+    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#campo-previa",
       "#abrir", "#so-guardar", "#desfecho", "#agendar", "#ver-ficha"]
       .forEach((s) => mostrar(s, false));
     return;
@@ -562,6 +563,8 @@ function pintarDiscagem() {
   // da Maria logo depois do José deixava "Sr. José" no campo — e a mensagem
   // saía com o nome errado, que é pior do que sair sem nome nenhum.
   if (k !== chaveAtual) {
+    // Outra pessoa, outra mensagem: o ajuste feito para a anterior não a segue.
+    previaEditada = false;
     $("#nome").value = c ? c.nome || "" : "";
     const b = beneficioDe(c);
     $("#cpf").value = c && c.cpf ? cpfBonito(c.cpf) : "";
@@ -584,7 +587,7 @@ function pintarDiscagem() {
   mostrar("#campo-nome", true);
   mostrar("#campo-beneficio", true);
   mostrar("#campo-modelo", true);
-  mostrar("#previa", true);
+  mostrar("#campo-previa", true);
   mostrar("#abrir", true);
   mostrar("#so-guardar", true);
   mostrar("#ver-ficha", !!c);
@@ -592,7 +595,7 @@ function pintarDiscagem() {
   mostrar("#agendar", true);
   pintarRetorno(c, { campo: "#voltar-em", limpar: "#tirar-retorno", texto: "#agendar-atual" });
 
-  $("#previa").textContent = montarTexto();
+  atualizarPrevia();
 }
 
 function montarTexto() {
@@ -652,6 +655,30 @@ function guardarSemMandar() {
     : "Este contato já estava guardado."));
 }
 
+/**
+ * A mensagem que está na tela é a mensagem que vai. Ela nasce do modelo, mas
+ * a partir do momento em que alguém mexe nela, é a mão de quem escreveu que
+ * manda — por isso a marca. Sem ela, digitar o nome depois de ajustar o texto
+ * apagaria o ajuste sem avisar.
+ */
+function atualizarPrevia() {
+  if (!previaEditada) $("#previa").value = montarTexto();
+  $("#voltar-modelo").classList.toggle("oculto", !previaEditada);
+  esticarPrevia();
+}
+
+/** A caixa cresce com o texto: mensagem cortada não dá para conferir. */
+function esticarPrevia() {
+  const el = $("#previa");
+  el.style.height = "auto";
+  el.style.height = Math.max(el.scrollHeight, 92) + "px";
+}
+
+/** O que vai para o WhatsApp: o que está escrito, e não o que o modelo diria. */
+function textoParaEnviar() {
+  return ($("#previa").value || "").trim() || montarTexto();
+}
+
 function abrirConversa() {
   const bruto = $("#numero").value;
   if (!valido(bruto)) return avisar("Número incompleto.");
@@ -668,7 +695,7 @@ function abrirConversa() {
   if (recadoCpf) avisar(recadoCpf);
 
   const modeloId = $("#modelo").value;
-  const texto = montarTexto();
+  const texto = textoParaEnviar();
   registrar(c, "ENVIADO", { modeloId, texto });
   // Chamou no dia combinado? O compromisso está cumprido. Mas um retorno
   // marcado para daqui a um mês continua de pé — mandar hoje por outro
@@ -1189,7 +1216,7 @@ async function escolherDaAgenda() {
   n.dispatchEvent(new Event("input", { bubbles: true }));
   if (c.nome) {
     $("#nome").value = c.nome;
-    $("#previa").textContent = montarTexto();
+    atualizarPrevia();
   }
 }
 
@@ -1625,8 +1652,23 @@ function irPara(tela) {
 function ligar() {
   // -- discagem
   $("#numero").addEventListener("input", pintarDiscagem);
-  $("#nome").addEventListener("input", () => { $("#previa").textContent = montarTexto(); });
-  $("#modelo").addEventListener("change", () => { $("#previa").textContent = montarTexto(); });
+  $("#nome").addEventListener("input", () => { atualizarPrevia(); });
+  $("#modelo").addEventListener("change", () => {
+    previaEditada = false;
+    atualizarPrevia();
+  });
+
+  $("#previa").addEventListener("input", () => {
+    previaEditada = true;
+    $("#voltar-modelo").classList.remove("oculto");
+    esticarPrevia();
+  });
+
+  $("#voltar-modelo").addEventListener("click", () => {
+    previaEditada = false;
+    atualizarPrevia();
+    avisar("Texto do modelo de volta.");
+  });
   $("#abrir").addEventListener("click", abrirConversa);
   $("#so-guardar").addEventListener("click", guardarSemMandar);
   $("#beneficio-numero").addEventListener("blur", () => {
@@ -1835,7 +1877,7 @@ function ligar() {
     estado.eu.instituicao = $("#eu-instituicao").value.trim();
     ajustesMexidos();
     guardar();
-    $("#previa").textContent = montarTexto();
+    atualizarPrevia();
   };
   $("#eu-nome").addEventListener("change", salvarEu);
   $("#eu-instituicao").addEventListener("change", salvarEu);
