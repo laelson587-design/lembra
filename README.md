@@ -184,8 +184,15 @@ Duas formas, ambas dentro da ficha do contato:
 
 1. **Colar.** No WhatsApp, segure uma mensagem, marque as que quiser, toque em
    copiar e cole no campo. Serve para o trecho que importa.
-2. **Importar.** No WhatsApp: abra a conversa → menu → **Exportar conversa** →
-   **Sem mídia**. Escolha o arquivo `.txt` na ficha. Traz o histórico inteiro.
+2. **Importar.** No WhatsApp: abra a conversa → toque no nome lá em cima →
+   **Exportar conversa** → **Sem mídia** → **Salvar em Arquivos**. Na ficha,
+   toque em importar e escolha **Escolher arquivo**. Traz o histórico inteiro.
+
+   Serve tanto o `.txt` solto quanto o `.zip` que sai quando a exportação vai
+   com mídia — o Tino abre o zip sozinho, pega só o texto e ignora as fotos.
+   O seletor não filtra por extensão de propósito: filtrando, o arquivo que o
+   WhatsApp acabou de salvar aparecia cinza, dava para ver e não dava para
+   escolher.
 
 Vale fazer isso **antes** de um número cair, com os clientes que importam.
 Conversa exportada é o único jeito de o histórico sobreviver ao bloqueio.

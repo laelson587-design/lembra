@@ -1188,6 +1188,80 @@ function lerExportacao(cru) {
   return { texto: limpo.trim(), mensagens };
 }
 
+/**
+ * O que sai do WhatsApp nem sempre é um .txt solto: dependendo do aparelho e
+ * da versão, vem um .zip com o _chat.txt dentro. Filtrar o seletor por .txt
+ * deixava esse arquivo cinza na tela do celular — dava para ver e não dava
+ * para escolher. Agora entra qualquer arquivo, e o zip é aberto aqui mesmo.
+ */
+async function textoDoArquivo(arquivo) {
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const ehZip = bytes[0] === 0x50 && bytes[1] === 0x4b &&
+    bytes[2] === 0x03 && bytes[3] === 0x04;
+  return ehZip ? textoDoZip(bytes) : new TextDecoder("utf-8").decode(bytes);
+}
+
+/**
+ * Zip na mão, sem biblioteca: o índice fica no fim do arquivo, cada entrada
+ * diz onde seus dados começam, e quem descomprime é o próprio navegador.
+ * Só o texto da conversa interessa — foto e áudio ficam de fora.
+ */
+async function textoDoZip(bytes) {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const texto = (a, b) => new TextDecoder("utf-8").decode(bytes.subarray(a, b));
+
+  // O fim do índice tem assinatura própria e mora nos últimos 64 KB.
+  let fim = -1;
+  const limite = Math.max(0, bytes.length - 66000);
+  for (let i = bytes.length - 22; i >= limite; i--) {
+    if (v.getUint32(i, true) === 0x06054b50) { fim = i; break; }
+  }
+  if (fim < 0) throw new Error("zip sem índice");
+
+  const quantas = v.getUint16(fim + 10, true);
+  let p = v.getUint32(fim + 16, true);
+  const entradas = [];
+  for (let i = 0; i < quantas; i++) {
+    if (p + 46 > bytes.length || v.getUint32(p, true) !== 0x02014b50) break;
+    const tamNome = v.getUint16(p + 28, true);
+    entradas.push({
+      nome: texto(p + 46, p + 46 + tamNome),
+      metodo: v.getUint16(p + 10, true),
+      comprimido: v.getUint32(p + 20, true),
+      onde: v.getUint32(p + 42, true),
+    });
+    p += 46 + tamNome + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+  }
+
+  const alvo = entradas.find((e) => /_chat\.txt$/i.test(e.nome)) ||
+    entradas.find((e) => /\.txt$/i.test(e.nome));
+  if (!alvo) return "";
+  if (alvo.comprimido === 0xffffffff) throw new Error("zip grande demais");
+
+  // O cabeçalho local repete nome e extra, com tamanhos próprios.
+  const inicio = alvo.onde + 30 +
+    v.getUint16(alvo.onde + 26, true) + v.getUint16(alvo.onde + 28, true);
+  const dados = bytes.subarray(inicio, inicio + alvo.comprimido);
+  if (alvo.metodo === 0) return new TextDecoder("utf-8").decode(dados);
+  if (alvo.metodo !== 8 || typeof DecompressionStream !== "function") {
+    throw new Error("não sei abrir esse zip");
+  }
+  const fluxo = new Blob([dados]).stream()
+    .pipeThrough(new DecompressionStream("deflate-raw"));
+  return new TextDecoder("utf-8").decode(await new Response(fluxo).arrayBuffer());
+}
+
+/**
+ * Arquivo que não é texto — uma foto, um PDF — lido como texto vira lixo de
+ * caractere. Guardar isso enche o aparelho e não serve para nada, então é
+ * melhor recusar na porta e dizer o que fazer.
+ */
+function pareceConversa(t) {
+  if (!t) return false;
+  const lixo = (t.match(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffd]/g) || []).length;
+  return lixo / t.length < 0.01;
+}
+
 // ------------------------------------------------- a conversa para fora
 
 /**
@@ -1962,31 +2036,40 @@ function ligar() {
     if (guardar()) { abrirFicha(chaveFicha); avisar("Conversa guardada."); }
   });
 
-  $("#ficha-arquivo").addEventListener("change", (ev) => {
+  $("#ficha-arquivo").addEventListener("change", async (ev) => {
     const arquivo = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
     if (!arquivo) return;
     const c = estado.contatos[chaveFicha];
     if (!c) return;
 
-    const leitor = new FileReader();
-    leitor.onload = () => {
-      const { texto, mensagens } = lerExportacao(String(leitor.result || ""));
-      if (!texto) return avisar("O arquivo veio vazio.");
+    let cru = "";
+    try {
+      cru = await textoDoArquivo(arquivo);
+    } catch (e) {
+      return avisar("Não consegui abrir esse arquivo. Exporte de novo escolhendo Sem mídia.");
+    }
 
-      const LIMITE = 200000;   // o aparelho guarda uns 5 MB no total
-      const cortado = texto.length > LIMITE;
-      registrar(c, "IMPORTADO", {
-        texto: cortado ? texto.slice(-LIMITE) : texto,
-      });
-      if (guardar()) {
-        abrirFicha(chaveFicha);
-        avisar(cortado
+    const { texto, mensagens } = lerExportacao(cru || "");
+    if (!texto) return avisar("Não achei conversa nenhuma dentro desse arquivo.");
+    if (!pareceConversa(texto)) {
+      return avisar("Esse arquivo não é uma conversa. No WhatsApp use Exportar conversa → Sem mídia.");
+    }
+
+    const LIMITE = 200000;   // o aparelho guarda uns 5 MB no total
+    const cortado = texto.length > LIMITE;
+    registrar(c, "IMPORTADO", {
+      texto: cortado ? texto.slice(-LIMITE) : texto,
+    });
+    if (guardar()) {
+      abrirFicha(chaveFicha);
+      // Sem datas reconhecidas o texto ainda vale, mas ele precisa saber.
+      avisar(!mensagens
+        ? "Guardei o texto, mas não reconheci as datas. Confira se é a conversa certa."
+        : cortado
           ? `Importado: ${mensagens} mensagens (guardei as mais recentes).`
           : `Importado: ${mensagens} mensagens.`);
-      }
-    };
-    leitor.readAsText(arquivo);
-    ev.target.value = "";
+    }
   });
 
   $("#ficha-apagar").addEventListener("click", () => {
