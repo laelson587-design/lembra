@@ -214,8 +214,16 @@ aparelho de quem usa e nunca chegam ao repositório.
 
 ### Ícone
 
-`node scripts/icone.js` regenera `icone-192.png` e `icone-512.png`. O desenho é
-feito por matemática, sem biblioteca nenhuma.
+O desenho é o **anel do veredito**: três arcos na mesma ordem em que o app
+decide — verde para pode ir, âmbar para cuidado, vermelho para pare — e o ponto
+no miolo, que é a pausa antes de mandar.
+
+A fonte da verdade é `icone.svg`, que é texto e versiona como qualquer outro
+arquivo. `node scripts/icone.js` rasteriza dali os PNGs de 192 e 512, usando o
+Chrome que já está na máquina — continua sem instalar nada.
+
+O anel cabe dentro de 73% do quadrado, que é o que sobra depois do corte
+redondo que o Android faz em ícone *maskable*.
 
 ## Conta e sincronização
 

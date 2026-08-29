@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- O ícone do Tino: o anel do veredito.
+       Três arcos, na mesma ordem em que o app decide — verde para pode ir,
+       âmbar para cuidado, vermelho para pare — e o ponto no miolo, que é a
+       pausa antes de mandar.
+
+       As cores são as mesmas do app (--bom, --atencao, --ruim, --marca), e o
+       anel cabe dentro de 73% do quadrado: é o que sobra depois do corte
+       redondo que o Android faz em ícone "maskable". -->
+
+  <rect width="100" height="100" fill="#ffffff"/>
+
+  <g fill="none" stroke-width="13" stroke-linecap="round">
+    <circle cx="50" cy="50" r="30" stroke="#0f7a4a" stroke-dasharray="47 142"
+            transform="rotate(-85 50 50)"/>
+    <circle cx="50" cy="50" r="30" stroke="#e0a020" stroke-dasharray="47 142"
+            transform="rotate(35 50 50)"/>
+    <circle cx="50" cy="50" r="30" stroke="#b4232b" stroke-dasharray="47 142"
+            transform="rotate(155 50 50)"/>
+  </g>
+
+  <circle cx="50" cy="50" r="9" fill="#1d4ed8"/>
+</svg>
