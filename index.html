@@ -34,19 +34,23 @@
          fica numa aba, e o Safari apaga os dados de aba. -->
     <div id="instalar" class="veredito pare oculto">
       <p class="titulo">Instale antes de usar</p>
-      <p class="detalhe">No iPhone, o Safari <b>apaga os dados</b> de site que
-        fica só em aba. Enquanto o Tino não estiver na Tela de Início, ele
-        vai esquecer tudo.</p>
-      <ol class="passos">
-        <li>Toque no botão <b>Compartilhar</b>, o quadradinho com a seta para cima,
-            embaixo na barra do Safari.</li>
-        <li>Role e escolha <b>Adicionar à Tela de Início</b>.</li>
-        <li>Confirme e <b>feche o Safari</b>.</li>
-        <li>Abra pelo <b>ícone do anel colorido</b> na tela do celular. Só por ele, daqui em diante.</li>
-      </ol>
-      <p class="detalhe"><b>Atenção:</b> o app aberto pelo ícone começa vazio — o
-        iPhone guarda separado do Safari. Se você já tem uma cópia salva, use
-        <b>Ajustes → Restaurar cópia</b> lá dentro.</p>
+      <p class="detalhe">Na aba do Safari o iPhone <b>apaga os dados</b>. Só
+        instalado o Tino lembra. <b>Compartilhar ▸ Adicionar à Tela de Início</b>,
+        e depois abra só pelo ícone.</p>
+      <details class="dobra">
+        <summary>ver os passos</summary>
+        <ol class="passos">
+          <li>Toque no botão <b>Compartilhar</b>, o quadradinho com a seta para cima,
+              embaixo na barra do Safari.</li>
+          <li>Role e escolha <b>Adicionar à Tela de Início</b>.</li>
+          <li>Confirme e <b>feche o Safari</b>.</li>
+          <li>Abra pelo <b>ícone do anel colorido</b> na tela do celular. Só por ele,
+              daqui em diante.</li>
+        </ol>
+        <p class="detalhe"><b>Atenção:</b> o app aberto pelo ícone começa vazio — o
+          iPhone guarda separado do Safari. Se você já tem uma cópia salva, use
+          <b>Ajustes → Restaurar cópia</b> lá dentro.</p>
+      </details>
     </div>
 
     <!-- Se abriu vazio e não devia, o caminho de volta tem de estar à vista. -->
@@ -65,6 +69,24 @@
       <p class="titulo" id="copia-atrasada-titulo"></p>
       <p class="detalhe" id="copia-atrasada-detalhe"></p>
       <button id="copia-atrasada-botao" class="principal">Enviar cópia agora</button>
+    </div>
+
+    <!-- O que se vê antes de digitar qualquer coisa. A linha diz quantas
+         pessoas esperam hoje e leva para elas; o anel ao fundo é só a marca,
+         bem apagado, para a tela não ficar oca. -->
+    <div id="tela-vazia" class="tela-vazia oculto">
+      <button id="linha-do-dia" class="linha-do-dia oculto"></button>
+      <svg class="marca-agua" viewBox="0 0 100 100" aria-hidden="true">
+        <g fill="none" stroke-width="13" stroke-linecap="round">
+          <circle cx="50" cy="50" r="30" stroke="#0f7a4a" stroke-dasharray="47 142"
+                  transform="rotate(-85 50 50)"/>
+          <circle cx="50" cy="50" r="30" stroke="#e0a020" stroke-dasharray="47 142"
+                  transform="rotate(35 50 50)"/>
+          <circle cx="50" cy="50" r="30" stroke="#b4232b" stroke-dasharray="47 142"
+                  transform="rotate(155 50 50)"/>
+        </g>
+        <circle cx="50" cy="50" r="9" fill="#1d4ed8"/>
+      </svg>
     </div>
 
     <!-- O veredito. É o coração do app: aparece ANTES de mandar, não depois. -->

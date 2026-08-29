@@ -103,6 +103,24 @@ passa a **identificar a pessoa por inteiro**. O mesmo vale para a conversa
 exportada, que leva o CPF no cabeçalho. Guarde esses arquivos como você
 guardaria a lista impressa.
 
+## A tela antes de digitar
+
+Abrir o app e ver um campo vazio não diz nada. Então, enquanto não há número
+digitado, a tela responde a pergunta que o Tino existe para responder:
+
+> **3** pessoas para chamar hoje · 214 contatos ›
+
+A linha é tocável e leva direto para a aba Hoje — é o único atalho da tela, e
+ele **economiza** um toque em vez de custar um. Sem contato nenhum guardado ela
+não aparece: não há fila para mostrar.
+
+Abaixo dela, o anel da marca bem apagado. É assinatura, não ilustração — no
+tema escuro ele ganha um pouco mais de opacidade para não sumir de vez.
+
+O cartão de instalação, que só existe na aba do Safari, encolheu para três
+linhas com os passos atrás de um **ver os passos**. Ele é lido uma vez na vida;
+ocupar meia tela para sempre por causa de uma leitura única era mau negócio.
+
 ## A mensagem antes de sair
 
 O modelo escreve a mensagem, mas quem manda é você — então ela aparece numa

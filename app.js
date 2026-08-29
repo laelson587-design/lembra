@@ -553,6 +553,9 @@ function pintarDiscagem() {
   if (cobrar) pintarCobrancaDaCopia();
   mostrar("#copia-atrasada", cobrar);
 
+  mostrar("#tela-vazia", !ok);
+  if (!ok) pintarTelaVazia();
+
   if (!ok) {
     chaveAtual = null;
     ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#campo-previa",
@@ -612,6 +615,26 @@ function renderizar(texto, nome) {
     .replaceAll("{instituicao}", estado.eu.instituicao || "…")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * A tela antes de digitar. Em vez de vazio, a pergunta que o app existe para
+ * responder: quantas pessoas esperam hoje. A linha leva direto para elas — é o
+ * único atalho da tela, e ele economiza um toque em vez de custar um.
+ */
+function pintarTelaVazia() {
+  const total = Object.keys(estado.contatos).length;
+  const el = $("#linha-do-dia");
+
+  // Sem ninguém guardado não há fila, e o cartão de "nenhum contato" já fala.
+  el.classList.toggle("oculto", !total);
+  if (!total) return;
+
+  const fila = montarFila().length;
+  el.innerHTML = (fila
+    ? `<b>${fila}</b> ${fila === 1 ? "pessoa para chamar hoje" : "pessoas para chamar hoje"}`
+    : "Ninguém na fila hoje") +
+    ` · ${total} ${total === 1 ? "contato" : "contatos"} <span class="seta">›</span>`;
 }
 
 function montarTexto() {
@@ -1735,6 +1758,7 @@ function ligar() {
     avisar("Texto do modelo de volta.");
   });
   $("#abrir").addEventListener("click", abrirConversa);
+  $("#linha-do-dia").addEventListener("click", () => irPara("fila"));
   $("#so-guardar").addEventListener("click", guardarSemMandar);
   $("#beneficio-numero").addEventListener("blur", () => {
     $("#beneficio-numero").value = beneficioBonito($("#beneficio-numero").value);

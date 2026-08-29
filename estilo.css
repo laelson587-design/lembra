@@ -21,6 +21,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  .marca-agua { opacity: 0.2; }
+
   :root {
     /* color-scheme é obrigatório: sem ele, select e seletor de data saem
        com texto preto sobre fundo preto — invisível. */
@@ -203,6 +205,37 @@ button { font: inherit; cursor: pointer; }
 .veredito.pare .titulo    { color: var(--ruim); }
 
 .veredito .principal { margin-top: 12px; }
+
+/* Um "ver mais" leve, para o que precisa existir mas não precisa ocupar a
+   tela. Herda a cor do cartão em que estiver. */
+.dobra > summary {
+  display: inline-block; margin-top: 6px; list-style: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; text-decoration: underline;
+}
+.dobra > summary::-webkit-details-marker { display: none; }
+.dobra > summary::before { content: "▸ "; text-decoration: none; }
+.dobra[open] > summary::before { content: "▾ "; }
+.veredito.pare .dobra > summary { color: var(--ruim); }
+
+/* ---------- a tela antes de digitar ---------- */
+
+.tela-vazia { margin-top: 16px; text-align: center; }
+
+.linha-do-dia {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 18px; border-radius: 999px;
+  background: var(--carta); border: 1px solid var(--borda);
+  font-size: 14px; font-weight: 600; color: var(--fraco);
+}
+.linha-do-dia b { color: var(--texto); font-size: 15px; }
+.linha-do-dia .seta { color: var(--tenue); font-weight: 400; }
+
+/* Bem apagada: é assinatura, não ilustração. No escuro precisa de mais
+   opacidade para não sumir de vez. */
+.marca-agua {
+  display: block; width: min(58%, 230px); height: auto;
+  margin: 30px auto 0; opacity: 0.09;
+}
 
 .passos { margin: 10px 0 4px; padding-left: 20px; font-size: 14px; color: var(--fraco); }
 .passos li { margin-bottom: 6px; }
