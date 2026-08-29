@@ -164,9 +164,16 @@ se faz com modelo depois de ver a taxa de resposta dele.
 Os prazos se mudam em Ajustes. O corte na terceira tentativa não: quem não
 respondeu três vezes não responde na quarta — denuncia.
 
-**O retorno marcado passa na frente de tudo.** Você escolhe a data no
-calendário, na tela de Discar ou na ficha do contato, e ele some da fila até
-o dia chegar — quando volta, no topo. Marcar retorno também tira alguém de
+**O retorno marcado passa na frente de tudo** — e também segura tudo. Você
+escolhe a data no calendário, na tela de Discar ou na ficha do contato, e a
+pessoa sai da fila até o dia chegar. Nem a régua a traz de volta antes: se ela
+pediu para ser procurada no dia 25, chamar no dia 12 é quebrar o combinado, e o
+app não manda fazer isso.
+
+**Dois dias antes ela aparece como aviso**, num grupo separado no fim da lista,
+apagado e com o título *"chegando — ainda não é para chamar"*. Ele não entra na
+contagem do dia nem no número da aba: número na aba é chamado, e chamado é só
+para hoje. Quando a data chega, ela sobe para o topo. Marcar retorno também tira alguém de
 "sem interesse", porque marcar data é o contrário de descartar. Dá para
 agendar quem você ainda nem chamou: às vezes o combinado é só "me procura
 depois do dia 10".

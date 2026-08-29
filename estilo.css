@@ -331,6 +331,13 @@ button { font: inherit; cursor: pointer; }
 
 .item.marcado { border-color: var(--marca); background: var(--marca-fraca); }
 
+/* O grupo do que está chegando: separado e sem urgência. */
+.grupo {
+  margin: 18px 0 8px; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--tenue);
+}
+.item.adiada { border-left-color: var(--borda); opacity: 0.72; }
+
 .vazio { padding: 32px 16px; text-align: center; color: var(--tenue); }
 
 /* ---------- ficha ---------- */

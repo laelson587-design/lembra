@@ -630,7 +630,7 @@ function pintarTelaVazia() {
   el.classList.toggle("oculto", !total);
   if (!total) return;
 
-  const fila = montarFila().length;
+  const fila = filaDeHoje().length;
   el.innerHTML = (fila
     ? `<b>${fila}</b> ${fila === 1 ? "pessoa para chamar hoje" : "pessoas para chamar hoje"}`
     : "Ninguém na fila hoje") +
@@ -812,6 +812,13 @@ function recadoDe(tipo) {
 
 // ---------------------------------------------------------- fila do dia
 
+/* Quantos dias antes o retorno combinado aparece como aviso. Ele avisa, não
+   convoca: quem chega em dois dias fica num grupo à parte, embaixo, e não
+   entra na contagem do dia nem no número da aba. Misturar as duas coisas
+   transformaria "chega em dois dias" em "chame agora", que é exatamente o que
+   marcar retorno serve para evitar. */
+const DIAS_DE_ANTECEDENCIA = 2;
+
 function montarFila() {
   const h = hoje();
   const linhas = [];
@@ -825,8 +832,15 @@ function montarFila() {
     // Sem este segundo caso, quem tem retorno para o mês que vem reaparecia
     // hoje pelo caminho de baixo, e o app mandava quebrar o próprio combinado.
     if (c.voltarEm) {
-      if (dia(c.voltarEm) <= h) {
+      const faltam = diasEntre(h, dia(c.voltarEm));
+      if (faltam <= 0) {
         linhas.push({ k, c, ordem: 0, motivo: `retorno combinado para ${dataCurta(c.voltarEm)}` });
+      } else if (faltam <= DIAS_DE_ANTECEDENCIA) {
+        linhas.push({
+          k, c, ordem: 3, chegando: true,
+          motivo: `combinado para ${dataCurta(c.voltarEm)} · ${
+            faltam === 1 ? "amanhã" : "em " + faltam + " dias"}`,
+        });
       }
       continue;
     }
@@ -853,21 +867,30 @@ function montarFila() {
   return linhas;
 }
 
+/** Só quem é para chamar hoje. O que está chegando avisa, mas não conta. */
+function filaDeHoje() {
+  return montarFila().filter((l) => !l.chegando);
+}
+
 function pintarFila() {
   const linhas = montarFila();
+  const hojeMesmo = linhas.filter((l) => !l.chegando);
+  const chegando = linhas.filter((l) => l.chegando);
   const lista = $("#fila-lista");
 
-  $("#fila-contagem").textContent = linhas.length
-    ? `${linhas.length} para falar` : "vazia";
+  $("#fila-contagem").textContent =
+    (hojeMesmo.length ? `${hojeMesmo.length} para falar` : "vazia") +
+    (chegando.length ? ` · ${chegando.length} chegando` : "");
 
+  // O número na aba é um chamado, então conta só quem é de hoje.
   const badge = $("#badge-fila");
-  badge.textContent = linhas.length > 99 ? "99+" : String(linhas.length);
-  badge.classList.toggle("oculto", linhas.length === 0);
+  badge.textContent = hojeMesmo.length > 99 ? "99+" : String(hojeMesmo.length);
+  badge.classList.toggle("oculto", hojeMesmo.length === 0);
 
   const total = Object.keys(estado.contatos).length;
   $("#fila-resumo").textContent = total
     ? `De ${total} ${total === 1 ? "contato guardado" : "contatos guardados"}, ` +
-      `${linhas.length} ${linhas.length === 1 ? "está" : "estão"} no prazo de hoje. ` +
+      `${hojeMesmo.length} ${hojeMesmo.length === 1 ? "está" : "estão"} no prazo de hoje. ` +
       `O resto é para deixar quieto.`
     : "";
 
@@ -877,8 +900,8 @@ function pintarFila() {
     return;
   }
 
-  lista.innerHTML = linhas.map(({ k, c, ordem, motivo }) => {
-    const classe = ordem === 0 ? "ok" : ordem === 2 ? "novo" : "cuidado";
+  const item = ({ k, c, ordem, motivo, chegando: adiada }) => {
+    const classe = adiada ? "adiada" : ordem === 0 ? "ok" : ordem === 2 ? "novo" : "cuidado";
     return `<button class="item ${classe}" data-fila="${escapar(k)}">
       <span class="cresce">
         <span class="nome">${escapar(c.nome || bonito(c.numero))}</span>
@@ -886,7 +909,16 @@ function pintarFila() {
       </span>
       <span class="seta">›</span>
     </button>`;
-  }).join("");
+  };
+
+  lista.innerHTML =
+    (hojeMesmo.length
+      ? hojeMesmo.map(item).join("")
+      : `<p class="vazio">Ninguém para chamar hoje.<br>
+         Isso é bom: cada mensagem que você não manda é chip que dura mais.</p>`) +
+    (chegando.length
+      ? `<p class="grupo">Chegando — ainda não é para chamar</p>` + chegando.map(item).join("")
+      : "");
 }
 
 // ----------------------------------------------------------- contatos
