@@ -15,6 +15,9 @@
 /* O app virou Tino, a chave não: ela é o endereço dos dados no aparelho, e
    trocá-la apagaria os contatos de quem já usa. Nome antigo, dados intactos. */
 const CHAVE = "lembra.v1";
+/* Só a cor da última pintura, para o <head> não precisar abrir o arquivo
+   inteiro nem repetir a conta do anoitecer antes de o app carregar. */
+const PINTURA = "tino.pintura";
 
 const MODELOS_PADRAO = [
   {
@@ -2238,13 +2241,12 @@ function ligar() {
     aplicarTema();
   });
 
-  // Quem escolheu "Automático" espera que o app vire de noite junto com o
-  // celular, sem precisar abrir de novo.
-  if (CELULAR_NO_ESCURO && CELULAR_NO_ESCURO.addEventListener) {
-    CELULAR_NO_ESCURO.addEventListener("change", () => {
-      if (estado.tema === "auto") aplicarTema();
-    });
-  }
+  // No Automático a virada tem que acontecer com o app aberto na mão dele,
+  // sem reabrir: de dez em dez minutos, e sempre que a tela volta.
+  setInterval(() => { if (estado.tema === "auto") aplicarTema(); }, 600000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && estado.tema === "auto") aplicarTema();
+  });
 
   $("#copia-com-data").addEventListener("change", () => {
     estado.copiaComData = $("#copia-com-data").checked;
@@ -2339,17 +2341,32 @@ function iniciarCampos() {
   encherTipos("#ficha-beneficio-tipo");
 }
 
-/* A escolha do tema vale acima do celular. Só "auto" pergunta a ele — e aí
-   precisa continuar perguntando, porque o iPhone troca sozinho ao anoitecer
-   com quem usa o modo automático. */
-const CELULAR_NO_ESCURO = window.matchMedia
-  ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+/* Nascer e pôr do sol em São Paulo, mês a mês, em hora decimal. Números de
+   meio de mês, arredondados: a diferença para o dia exato é de minutos, e o
+   que importa aqui é ficar claro de dia e escuro de noite.
+
+   Por que uma tabela e não a posição do celular: pedir localização para
+   escolher cor seria trocar uma comodidade por uma permissão — e este app
+   existe justamente para não sair pedindo dado de ninguém. Quem não estiver
+   em São Paulo vê a virada alguns minutos deslocada, e nada mais. */
+const SOL = [
+  [5.3, 18.9], [5.8, 18.8], [6.1, 18.3], [6.3, 17.8], [6.7, 17.6], [6.8, 17.5],
+  [6.8, 17.7], [6.4, 17.9], [6.0, 18.1], [5.5, 18.3], [5.2, 18.6], [5.2, 18.8],
+];
+
+/** É noite lá fora? Usada pelo "Automático", que imita o que o Maps faz. */
+function escuroAgora(quando = new Date()) {
+  const [nasce, poe] = SOL[quando.getMonth()];
+  const hora = quando.getHours() + quando.getMinutes() / 60;
+  return hora < nasce || hora >= poe;
+}
 
 function aplicarTema() {
   const t = estado.tema;
-  const escuro = t === "escuro" ||
-    (t === "auto" && CELULAR_NO_ESCURO && CELULAR_NO_ESCURO.matches);
+  const escuro = t === "escuro" || (t === "auto" && escuroAgora());
   document.documentElement.classList.toggle("escuro", escuro);
+  // O <head> lê isto na próxima abertura para já pintar certo, antes do JS.
+  try { localStorage.setItem(PINTURA, escuro ? "escuro" : "claro"); } catch (e) {}
   document.querySelectorAll("#temas .chip").forEach((b) => {
     b.classList.toggle("ativo", b.dataset.tema === t);
   });

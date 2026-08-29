@@ -16,10 +16,9 @@
      escuro, que é a hora em que ele mais é usado. Lê direto do armazenamento
      porque o app.js ainda nem foi carregado. */
   try {
-    var t = (JSON.parse(localStorage.getItem("lembra.v1") || "{}").tema) || "escuro";
-    var escuro = t === "escuro" ||
-      (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-    if (escuro) document.documentElement.classList.add("escuro");
+    if ((localStorage.getItem("tino.pintura") || "escuro") === "escuro") {
+      document.documentElement.classList.add("escuro");
+    }
   } catch (e) {}
 </script>
 
@@ -252,7 +251,8 @@
       <button class="chip" data-tema="auto">Automático</button>
     </div>
     <p class="dica">Vale para o app inteiro, mesmo que o celular esteja no
-       contrário. <b>Automático</b> segue o ajuste do aparelho. No sol o claro
+       contrário. <b>Automático</b> clareia de manhã e escurece ao anoitecer,
+       como o Maps — pelo relógio, sem pedir sua localização. No sol o claro
        se lê melhor; dentro de agência e de noite, o escuro cansa menos.</p>
 
     <h2>Quem está falando</h2>
