@@ -13,6 +13,22 @@
 </head>
 <body>
 
+<!-- O anel mora aqui uma vez só; as telas vazias e o rodapé apontam para ele
+     com <use>. Assim não existe cópia do desenho para sair de sincronia. -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <symbol id="anel-marca" viewBox="0 0 100 100">
+    <g fill="none" stroke-width="13" stroke-linecap="round">
+      <circle cx="50" cy="50" r="30" stroke="#0f7a4a" stroke-dasharray="47 142"
+              transform="rotate(-85 50 50)"/>
+      <circle cx="50" cy="50" r="30" stroke="#e0a020" stroke-dasharray="47 142"
+              transform="rotate(35 50 50)"/>
+      <circle cx="50" cy="50" r="30" stroke="#b4232b" stroke-dasharray="47 142"
+              transform="rotate(155 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="9" fill="#1d4ed8"/>
+  </symbol>
+</svg>
+
 <!-- ======================= DISCAR ======================= -->
 <section id="tela-discar" class="tela ativa">
   <header class="cabecalho">
@@ -77,15 +93,7 @@
     <div id="tela-vazia" class="tela-vazia oculto">
       <button id="linha-do-dia" class="linha-do-dia oculto"></button>
       <svg class="marca-agua" viewBox="0 0 100 100" aria-hidden="true">
-        <g fill="none" stroke-width="13" stroke-linecap="round">
-          <circle cx="50" cy="50" r="30" stroke="#0f7a4a" stroke-dasharray="47 142"
-                  transform="rotate(-85 50 50)"/>
-          <circle cx="50" cy="50" r="30" stroke="#e0a020" stroke-dasharray="47 142"
-                  transform="rotate(35 50 50)"/>
-          <circle cx="50" cy="50" r="30" stroke="#b4232b" stroke-dasharray="47 142"
-                  transform="rotate(155 50 50)"/>
-        </g>
-        <circle cx="50" cy="50" r="9" fill="#1d4ed8"/>
+        <use href="#anel-marca"/>
       </svg>
     </div>
 
@@ -369,7 +377,10 @@
     <h2 class="perigo">Zona de risco</h2>
     <button id="apagar" class="perigoso">Apagar tudo</button>
 
-    <p class="rodape">Tino · os dados nunca saem deste aparelho.</p>
+    <div class="selo">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><use href="#anel-marca"/></svg>
+      <p class="rodape">Tino · os dados nunca saem deste aparelho.</p>
+    </div>
   </div>
 </section>
 

@@ -236,6 +236,14 @@ button { font: inherit; cursor: pointer; }
   display: block; width: min(58%, 230px); height: auto;
   margin: 30px auto 0; opacity: 0.09;
 }
+/* Nas listas vazias ela divide o espaço com o recado, então entra menor. */
+.marca-agua.menor { width: min(34%, 128px); margin-top: 4px; }
+
+/* No rodapé dos Ajustes não é marca d'água, é assinatura: aparece de verdade,
+   no tamanho de um ícone, onde ninguém precisa ler nada por cima. */
+.selo { margin-top: 30px; text-align: center; }
+.selo svg { display: block; width: 26px; height: 26px; margin: 0 auto 8px; opacity: 0.55; }
+.selo .rodape { margin: 0; }
 
 .passos { margin: 10px 0 4px; padding-left: 20px; font-size: 14px; color: var(--fraco); }
 .passos li { margin-bottom: 6px; }

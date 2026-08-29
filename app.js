@@ -810,6 +810,12 @@ function recadoDe(tipo) {
   }[tipo] || "Anotado.";
 }
 
+/* A marca só aparece onde a tela ficaria oca. Nunca atrás de lista: nome e
+   telefone precisam ser lidos no sol, na rua, com pressa. */
+const MARCA =
+  '<svg class="marca-agua menor" viewBox="0 0 100 100" aria-hidden="true">' +
+  '<use href="#anel-marca"/></svg>';
+
 // ---------------------------------------------------------- fila do dia
 
 /* Quantos dias antes o retorno combinado aparece como aviso. Ele avisa, não
@@ -896,7 +902,7 @@ function pintarFila() {
 
   if (!linhas.length) {
     lista.innerHTML = `<p class="vazio">Ninguém para chamar hoje.<br>
-      Isso é bom: cada mensagem que você não manda é chip que dura mais.</p>`;
+      Isso é bom: cada mensagem que você não manda é chip que dura mais.</p>` + MARCA;
     return;
   }
 
@@ -961,7 +967,7 @@ function pintarContatos() {
   if (!itens.length) {
     lista.innerHTML = `<p class="vazio">${total
       ? "Nada com esse filtro."
-      : "Ainda não há ninguém aqui.<br>Digite um número na aba Discar e a memória começa."}</p>`;
+      : "Ainda não há ninguém aqui.<br>Digite um número na aba Discar e a memória começa."}</p>` + MARCA;
     return;
   }
 
