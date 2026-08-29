@@ -819,8 +819,15 @@ function montarFila() {
   for (const [k, c] of Object.entries(estado.contatos)) {
     if (c.status === "NAO_PERTURBE" || c.status === "SEM_INTERESSE") continue;
 
-    if (c.voltarEm && dia(c.voltarEm) <= h) {
-      linhas.push({ k, c, ordem: 0, motivo: `retorno combinado para ${dataCurta(c.voltarEm)}` });
+    // Retorno marcado manda em tudo, inclusive na régua. Se a data chegou, a
+    // pessoa encabeça a fila; se ainda não chegou, ela fica FORA — foi o que
+    // ficou combinado com ela, e a régua não tem autoridade para desmarcar.
+    // Sem este segundo caso, quem tem retorno para o mês que vem reaparecia
+    // hoje pelo caminho de baixo, e o app mandava quebrar o próprio combinado.
+    if (c.voltarEm) {
+      if (dia(c.voltarEm) <= h) {
+        linhas.push({ k, c, ordem: 0, motivo: `retorno combinado para ${dataCurta(c.voltarEm)}` });
+      }
       continue;
     }
 
