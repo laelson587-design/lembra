@@ -7,8 +7,14 @@
   --carta: #ffffff;
   --borda: #d9dee6;
   --texto: #16181d;
-  --fraco: #626b7a;
-  --tenue: #8b94a3;
+  /* Os dois cinzas foram medidos contra o fundo, não escolhidos no olho:
+     4.5:1 é o mínimo para ler texto pequeno na rua. O antigo --tenue dava
+     3:1 — o nome da aba, a hora de cada registro e o aviso do que está
+     chegando ficavam quase apagados no sol. */
+  --fraco: #4c5563;   /* 6.7:1 sobre o fundo */
+  --tenue: #616a78;   /* 4.8:1 sobre o fundo */
+  /* O que se escreve por cima do azul e do vermelho. */
+  --sobre-cor: #ffffff;
   --marca: #1d4ed8;
   --marca-fraca: #e6ecfd;
   --bom: #0f7a4a;
@@ -34,8 +40,12 @@
   --carta: #1a1d23;
   --borda: #2c313a;
   --texto: #eef1f5;
-  --fraco: #9aa4b2;
-  --tenue: #6e7887;
+  --fraco: #9aa4b2;   /* 7.5:1 sobre a carta */
+  --tenue: #8a93a1;   /* 5.4:1 — o antigo dava 3.8 */
+  /* No escuro o azul e o vermelho são claros: texto branco em cima deles
+     dava 2.7:1, pior que qualquer outra coisa do app. Escrever escuro por
+     cima resolve e ainda fica mais bonito. */
+  --sobre-cor: #0b1220;
   --marca: #6f9bff;
   --marca-fraca: #1b2540;
   --bom: #4bd394;
@@ -146,7 +156,7 @@ button { font: inherit; cursor: pointer; }
 
 .principal {
   display: block; width: 100%; margin-top: 6px; padding: 17px;
-  font-size: 17px; font-weight: 700; color: #fff;
+  font-size: 17px; font-weight: 700; color: var(--sobre-cor);
   background: var(--marca); border: 0; border-radius: var(--raio);
 }
 .principal:active { filter: brightness(0.92); }
@@ -320,7 +330,7 @@ button { font: inherit; cursor: pointer; }
   border-radius: 999px; border: 1px solid var(--borda);
   background: var(--carta); color: var(--fraco);
 }
-.chip.ativo { background: var(--marca); border-color: var(--marca); color: #fff; }
+.chip.ativo { background: var(--marca); border-color: var(--marca); color: var(--sobre-cor); }
 
 /* Fica colada acima da barra de abas — 76px é o espaço que o corpo já
    reserva para elas — senão sumiria atrás delas numa lista longa. */
@@ -346,7 +356,7 @@ button { font: inherit; cursor: pointer; }
   margin: 18px 0 8px; font-size: 12px; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase; color: var(--tenue);
 }
-.item.adiada { border-left-color: var(--borda); opacity: 0.72; }
+.item.adiada { border-left-color: var(--borda); opacity: 0.85; }
 
 .vazio { padding: 32px 16px; text-align: center; color: var(--tenue); }
 
@@ -406,7 +416,7 @@ button { font: inherit; cursor: pointer; }
 .badge {
   position: absolute; top: 4px; left: 50%; margin-left: 6px;
   min-width: 18px; padding: 1px 5px;
-  background: var(--ruim); color: #fff;
+  background: var(--ruim); color: var(--sobre-cor);
   font-size: 10px; font-style: normal; font-weight: 700;
   border-radius: 999px; text-align: center;
 }
