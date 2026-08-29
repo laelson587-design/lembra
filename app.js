@@ -1173,19 +1173,39 @@ function fecharFicha() {
   pintarContatos();
 }
 
+/* Toda exportação abre com um recado do próprio WhatsApp — o aviso da
+   criptografia — carimbado com data e com o nome de quem fala, igualzinho a
+   uma mensagem. Na ficha ele fica no alto e empurra a conversa de verdade
+   para baixo. Sai fora, mas só enquanto estiver na frente de tudo: se alguém
+   escrever isso durante a conversa, é fala de gente e fica. */
+const RECADO_DO_APP =
+  /criptografi\w+ de ponta a ponta|end-to-end encrypted|Ninguém fora desta conversa/i;
+
 /**
  * Converte a exportação do WhatsApp num texto limpo.
  * Android:  11/08/2026 14:32 - Fulano: mensagem
  * iPhone:  [11/08/2026 14:32:10] Fulano: mensagem
- * Só interessa reconhecer o começo de linha para contar mensagens e tirar o
- * lixo invisível que os dois formatos deixam.
+ * Só interessa reconhecer o começo de linha para separar uma mensagem da
+ * outra — mensagem comprida ocupa várias linhas — e tirar o lixo invisível
+ * que os dois formatos deixam.
  */
 function lerExportacao(cru) {
   const limpo = cru.replace(/[\u200E\u200F\u202A-\u202E]/g, "");
-  const linhas = limpo.split(/\r?\n/);
   const inicio = /^\[?\d{1,2}\/\d{1,2}\/\d{2,4}[,]?\s+\d{1,2}:\d{2}/;
-  const mensagens = linhas.filter((l) => inicio.test(l)).length;
-  return { texto: limpo.trim(), mensagens };
+
+  const blocos = [];
+  for (const linha of limpo.split(/\r?\n/)) {
+    if (inicio.test(linha) || !blocos.length) blocos.push([linha]);
+    else blocos[blocos.length - 1].push(linha);
+  }
+
+  // Só o que vem na frente da conversa é descartado, e só enquanto for recado
+  // do app: assim a fala de gente nunca some, esteja onde estiver.
+  let corte = 0;
+  while (corte < blocos.length && RECADO_DO_APP.test(blocos[corte].join("\n"))) corte++;
+  const vale = blocos.slice(corte);
+  const mensagens = vale.filter((b) => inicio.test(b[0])).length;
+  return { texto: vale.map((b) => b.join("\n")).join("\n").trim(), mensagens };
 }
 
 /**
