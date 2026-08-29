@@ -20,28 +20,30 @@
   --raio: 14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .marca-agua { opacity: 0.2; }
+/* O escuro não depende mais do ajuste do celular: quem decide é a aba
+   Ajustes, e é o JS que põe esta classe na raiz. Com "Automático" ele
+   consulta o celular e reage se a pessoa mudar lá. Uma classe só, em vez de
+   duas cópias das cores — media query e seletor — que sairiam de sincronia. */
+.escuro .marca-agua { opacity: 0.2; }
 
-  :root {
-    /* color-scheme é obrigatório: sem ele, select e seletor de data saem
-       com texto preto sobre fundo preto — invisível. */
-    color-scheme: dark;
-    --fundo: #101216;
-    --carta: #1a1d23;
-    --borda: #2c313a;
-    --texto: #eef1f5;
-    --fraco: #9aa4b2;
-    --tenue: #6e7887;
-    --marca: #6f9bff;
-    --marca-fraca: #1b2540;
-    --bom: #4bd394;
-    --bom-fraco: #10281f;
-    --atencao: #f2b25c;
-    --atencao-fraco: #2b2113;
-    --ruim: #ff7b7b;
-    --ruim-fraco: #2d1618;
-  }
+:root.escuro {
+  /* color-scheme é obrigatório: sem ele, select e seletor de data saem
+     com texto preto sobre fundo preto — invisível. */
+  color-scheme: dark;
+  --fundo: #101216;
+  --carta: #1a1d23;
+  --borda: #2c313a;
+  --texto: #eef1f5;
+  --fraco: #9aa4b2;
+  --tenue: #6e7887;
+  --marca: #6f9bff;
+  --marca-fraca: #1b2540;
+  --bom: #4bd394;
+  --bom-fraco: #10281f;
+  --atencao: #f2b25c;
+  --atencao-fraco: #2b2113;
+  --ruim: #ff7b7b;
+  --ruim-fraco: #2d1618;
 }
 
 * { box-sizing: border-box; }

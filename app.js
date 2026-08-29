@@ -64,6 +64,7 @@ const PADRAO = {
   contatos: {},
   copiaEm: null,     // quando a última cópia de segurança foi tirada
   copiaComData: false,  // nome com a data (guarda várias) ou nome fixo (substitui)
+  tema: "escuro",    // "escuro" | "claro" | "auto" (segue o celular)
   aberturas: 0,      // quantas vezes o app abriu: mede se o navegador apaga
   desde: null,       // data da primeira abertura que sobreviveu
   ajustadoEm: null,  // última mexida nos ajustes, para a sincronia desempatar
@@ -100,6 +101,7 @@ function estruturar(d) {
     contatos: d.contatos || {},
     copiaEm: d.copiaEm || null,
     copiaComData: !!d.copiaComData,
+    tema: d.tema === "claro" || d.tema === "auto" ? d.tema : "escuro",
     aberturas: Number(d.aberturas) || 0,
     desde: d.desde || null,
     ajustadoEm: d.ajustadoEm || null,
@@ -2227,6 +2229,23 @@ function ligar() {
     avisar("Você saiu da conta.");
   });
 
+  $("#temas").addEventListener("click", (ev) => {
+    const botao = ev.target.closest(".chip");
+    if (!botao) return;
+    estado.tema = botao.dataset.tema;
+    ajustesMexidos();
+    guardar();
+    aplicarTema();
+  });
+
+  // Quem escolheu "Automático" espera que o app vire de noite junto com o
+  // celular, sem precisar abrir de novo.
+  if (CELULAR_NO_ESCURO && CELULAR_NO_ESCURO.addEventListener) {
+    CELULAR_NO_ESCURO.addEventListener("change", () => {
+      if (estado.tema === "auto") aplicarTema();
+    });
+  }
+
   $("#copia-com-data").addEventListener("change", () => {
     estado.copiaComData = $("#copia-com-data").checked;
     ajustesMexidos();
@@ -2320,7 +2339,24 @@ function iniciarCampos() {
   encherTipos("#ficha-beneficio-tipo");
 }
 
+/* A escolha do tema vale acima do celular. Só "auto" pergunta a ele — e aí
+   precisa continuar perguntando, porque o iPhone troca sozinho ao anoitecer
+   com quem usa o modo automático. */
+const CELULAR_NO_ESCURO = window.matchMedia
+  ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+function aplicarTema() {
+  const t = estado.tema;
+  const escuro = t === "escuro" ||
+    (t === "auto" && CELULAR_NO_ESCURO && CELULAR_NO_ESCURO.matches);
+  document.documentElement.classList.toggle("escuro", escuro);
+  document.querySelectorAll("#temas .chip").forEach((b) => {
+    b.classList.toggle("ativo", b.dataset.tema === t);
+  });
+}
+
 function pintarTudo() {
+  aplicarTema();
   pintarModelos();
   pintarDiscagem();
   pintarFila();
