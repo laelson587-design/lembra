@@ -190,6 +190,15 @@ Duas formas, ambas dentro da ficha do contato:
 
    Serve tanto o `.txt` solto quanto o `.zip` que sai quando a exportação vai
    com mídia — o Tino abre o zip sozinho, pega só o texto e ignora as fotos.
+   O aviso de criptografia que o WhatsApp põe na frente de toda exportação não
+   entra: é recado do aplicativo, não fala de gente.
+
+   **Importar de novo meses depois não duplica nada.** A exportação vem sempre
+   desde o começo da conversa, então o Tino procura o que já está guardado
+   dentro do arquivo e acrescenta só o que veio depois — um registro de
+   continuação. Se não houver nada novo, ele diz isso e não guarda. Nada é
+   substituído nem apagado: evento aqui só se acrescenta, que é o que permite
+   juntar dois aparelhos sem perder histórico.
    O seletor não filtra por extensão de propósito: filtrando, o arquivo que o
    WhatsApp acabou de salvar aparecia cinza, dava para ver e não dava para
    escolher.

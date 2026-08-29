@@ -1282,6 +1282,29 @@ function pareceConversa(t) {
   return lixo / t.length < 0.01;
 }
 
+/**
+ * A exportação do WhatsApp é sempre a conversa inteira, desde o começo. Então
+ * importar de novo depois de meses guardaria tudo outra vez, e a ficha teria
+ * duas cópias da mesma coisa ocupando o aparelho.
+ *
+ * Aqui se procura o que já está guardado dentro do arquivo novo e se separa
+ * só o que veio depois. Nada é substituído nem apagado: evento no Tino só se
+ * acrescenta, porque é isso que deixa juntar dois aparelhos sem perder nada.
+ * Se o arquivo não contiver o que já existe — outra conversa, ou histórico
+ * apagado no celular — entra inteiro, e aí quem decide é ele.
+ */
+function soONovo(c, texto) {
+  const antigos = c.eventos.filter((e) => e.tipo === "IMPORTADO" && e.texto);
+  const ultimo = antigos[antigos.length - 1];
+  if (!ultimo) return { trecho: texto, continuacao: false };
+
+  const onde = texto.indexOf(ultimo.texto);
+  if (onde < 0) return { trecho: texto, continuacao: false };
+
+  const resto = texto.slice(onde + ultimo.texto.length).trim();
+  return resto ? { trecho: resto, continuacao: true } : null;
+}
+
 // ------------------------------------------------- a conversa para fora
 
 /**
@@ -2076,19 +2099,25 @@ function ligar() {
       return avisar("Esse arquivo não é uma conversa. No WhatsApp use Exportar conversa → Sem mídia.");
     }
 
+    const novo = soONovo(c, texto);
+    if (!novo) return avisar("Nada novo: essa conversa já está guardada inteira.");
+
     const LIMITE = 200000;   // o aparelho guarda uns 5 MB no total
-    const cortado = texto.length > LIMITE;
+    const cortado = novo.trecho.length > LIMITE;
+    const quantas = novo.continuacao ? lerExportacao(novo.trecho).mensagens : mensagens;
     registrar(c, "IMPORTADO", {
-      texto: cortado ? texto.slice(-LIMITE) : texto,
+      texto: cortado ? novo.trecho.slice(-LIMITE) : novo.trecho,
     });
     if (guardar()) {
       abrirFicha(chaveFicha);
       // Sem datas reconhecidas o texto ainda vale, mas ele precisa saber.
-      avisar(!mensagens
+      avisar(!quantas
         ? "Guardei o texto, mas não reconheci as datas. Confira se é a conversa certa."
-        : cortado
-          ? `Importado: ${mensagens} mensagens (guardei as mais recentes).`
-          : `Importado: ${mensagens} mensagens.`);
+        : novo.continuacao
+          ? `Continuação guardada: ${quantas} ${quantas === 1 ? "mensagem nova" : "mensagens novas"}.`
+          : cortado
+            ? `Importado: ${mensagens} mensagens (guardei as mais recentes).`
+            : `Importado: ${mensagens} mensagens.`);
     }
   });
 
