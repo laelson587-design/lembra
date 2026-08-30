@@ -440,6 +440,18 @@
       <input id="ficha-editar-nome" type="text" autocomplete="off">
     </label>
 
+    <!-- Ter dois telefones é o normal: o de casa e o do trabalho, o do filho,
+         o que a pessoa passa a usar quando o chip cai. Todos apontam para esta
+         mesma ficha — é isso que impede o app de tratar a mesma pessoa como
+         duas, com dois históricos que não se falam. -->
+    <h3>Números</h3>
+    <div id="ficha-numeros" class="numeros"></div>
+    <div class="linha-retorno">
+      <input id="ficha-novo-numero" type="tel" inputmode="numeric"
+             placeholder="11 98765-4321" autocomplete="off" enterkeyhint="done">
+      <button id="ficha-add-numero" class="secundario">Adicionar</button>
+    </div>
+
     <h3>Dados do cliente</h3>
     <label class="campo">
       <span class="rotulo">CPF</span>

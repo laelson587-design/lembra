@@ -225,6 +225,38 @@ function retornoPorEventos(eventos, reserva) {
   return reserva || null;
 }
 
+/**
+ * Os números são ajuste, como o CPF e o benefício: qual é o principal resolve
+ * por carimbo, quem mexeu por último. Mas nenhum número se perde no caminho —
+ * o que não ficou principal continua na lista dos outros, venha do lado que
+ * vier. Perder telefone numa sincronia é perder a pessoa.
+ *
+ * Sem carimbo nenhum dos dois lados, vale o número mais comprido: é o critério
+ * antigo, e ele acerta o caso que interessa — o nono dígito que a lista velha
+ * não tinha.
+ */
+function mesclarNumeros(a, b) {
+  const dono = new Date(a.numerosEm || 0) >= new Date(b.numerosEm || 0) ? a : b;
+  const principal = (dono.numerosEm ? dono.numero : null)
+    || ((a.numero || "").length >= (b.numero || "").length ? a.numero : b.numero);
+
+  const vistos = new Set();
+  const outros = [];
+  for (const n of [principal, a.numero, ...(a.outros || []),
+                             b.numero, ...(b.outros || [])]) {
+    const k = n ? chaveDe(n) : "";
+    if (!k || vistos.has(k)) continue;
+    vistos.add(k);
+    if (k !== chaveDe(principal)) outros.push(n);
+  }
+
+  return {
+    numero: principal,
+    outros,
+    numerosEm: dono.numerosEm || a.numerosEm || b.numerosEm || null,
+  };
+}
+
 function mesclarContato(a, b) {
   if (!a) return b;
   if (!b) return a;
@@ -242,7 +274,7 @@ function mesclarContato(a, b) {
   const outroCpf = donoCpf === a ? b : a;
 
   return {
-    numero: (a.numero || "").length >= (b.numero || "").length ? a.numero : b.numero,
+    ...mesclarNumeros(a, b),
     nome: a.nome || b.nome || "",
     criadoEm: new Date(a.criadoEm) <= new Date(b.criadoEm) ? a.criadoEm : b.criadoEm,
     status: situacaoPorEventos(eventos),

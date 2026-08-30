@@ -304,6 +304,21 @@ button { font: inherit; cursor: pointer; }
 
 .desfecho { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borda); }
 
+/* ---------- numeros do contato ---------- */
+
+/* Um por linha, o principal em cima. Trocar ou tirar número é coisa rara e
+   não pode competir com os botões que se usam todo dia — por isso os dois
+   ficam em texto, e não em botão cheio. */
+.numeros { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.numero {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; background: var(--carta);
+  border: 1px solid var(--borda); border-radius: var(--raio);
+}
+.numero .cresce { flex: 1; min-width: 0; font-size: 15px; }
+.numero .mini { float: none; padding: 6px 2px; }
+.numero .mini.apagar { color: var(--ruim); }
+
 /* ---------- listas ---------- */
 
 .lista { display: flex; flex-direction: column; gap: 8px; }

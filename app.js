@@ -283,14 +283,102 @@ function avisar(texto) {
 
 // --------------------------------------------------------------- contatos
 
-function achar(bruto) {
-  return estado.contatos[chaveDe(bruto)] || null;
+/**
+ * Junta listas de números tirando as repetições, pela chave e não pelo texto:
+ * 11 98765-4321 e 11 8765-4321 são o mesmo telefone escrito em duas épocas.
+ */
+function juntarNumeros(...listas) {
+  const vistos = new Set();
+  const fora = [];
+  for (const bruto of listas.flat()) {
+    const k = chaveDe(bruto);
+    if (!k || vistos.has(k)) continue;
+    vistos.add(k);
+    fora.push(normalizar(bruto));
+  }
+  return fora;
 }
 
-function criar(bruto, nome) {
+/**
+ * Os números da pessoa, o principal na frente.
+ *
+ * Ter dois telefones é o normal, não a exceção: o de casa e o do trabalho, o
+ * do filho, o que ela passa a usar quando o chip cai. Guardar só um faz o app
+ * dizer "número novo" para quem foi chamado ontem — justamente o erro que ele
+ * existe para evitar.
+ *
+ * Tolera contato guardado antes desta versão, que não tem o campo: cópia
+ * antiga abre sem conversão nenhuma.
+ */
+function numerosDe(c) {
+  if (!c) return [];
+  return juntarNumeros([c.numero], Array.isArray(c.outros) ? c.outros : []);
+}
+
+/**
+ * Procura pela chave e, se não achar, pelos outros números da pessoa.
+ *
+ * A varredura é de propósito. Um índice teria de ser refeito a cada mesclagem,
+ * restauração de cópia e sincronia — e índice esquecido devolve "número novo"
+ * para gente conhecida, que é o pior defeito que este app pode ter. A lista é
+ * a agenda de uma pessoa, não uma base: percorrê-la custa menos que o risco de
+ * ela ficar velha. A aba Contatos já percorre igual a cada tecla da busca.
+ *
+ * A chave onde o contato mora não conta como número dele. Ela é só o endereço
+ * dos dados, e não muda nunca — então quem tirou da ficha o número com que ela
+ * nasceu continuaria sendo achado por ele, e o app diria "você já falou com
+ * essa pessoa" sobre um telefone que a pessoa mandou apagar.
+ */
+function ehDele(c, k) {
+  return numerosDe(c).some((n) => chaveDe(n) === k);
+}
+
+function achar(bruto) {
   const k = chaveDe(bruto);
+  if (!k) return null;
+  const aqui = estado.contatos[k];
+  if (aqui && ehDele(aqui, k)) return aqui;
+  for (const c of Object.values(estado.contatos)) {
+    if (ehDele(c, k)) return c;
+  }
+  return null;
+}
+
+/**
+ * A chave onde a pessoa mora — que não é a do número digitado quando ele é o
+ * segundo dela. Sem isto, marcar "respondeu" depois de digitar o número de
+ * casa procuraria um contato que não existe, e não faria nada.
+ */
+function chaveDoNumero(bruto) {
+  const k = chaveDe(bruto);
+  if (!k) return k;
+  if (estado.contatos[k] && ehDele(estado.contatos[k], k)) return k;
+  for (const [chave, c] of Object.entries(estado.contatos)) {
+    if (ehDele(c, k)) return chave;
+  }
+  return k;
+}
+
+/**
+ * Onde a pessoa nova vai morar. Quase sempre é a chave do próprio número. A
+ * exceção é o endereço ocupado por alguém que já não tem esse telefone — aí a
+ * nova vai para o lugar ao lado, em vez de escrever por cima de quem estava
+ * lá. A chave é opaca: quem procura pessoa procura por número, não por ela.
+ */
+function chaveLivre(bruto) {
+  const k = chaveDe(bruto);
+  if (!estado.contatos[k]) return k;
+  let n = 2;
+  while (estado.contatos[k + "-" + n]) n++;
+  return k + "-" + n;
+}
+
+function criar(bruto, nome, outros) {
+  const k = chaveLivre(bruto);
   estado.contatos[k] = {
     numero: normalizar(bruto),
+    outros: [],
+    numerosEm: null,
     nome: (nome || "").trim(),
     criadoEm: new Date().toISOString(),
     status: "ABERTO",
@@ -301,7 +389,105 @@ function criar(bruto, nome) {
     beneficioEm: null,
     eventos: [],
   };
-  return estado.contatos[k];
+  const c = estado.contatos[k];
+  for (const n of outros || []) adicionarNumero(c, n);
+  return c;
+}
+
+/**
+ * Acrescenta um número à pessoa. Devolve o que aconteceu, porque quem chama é
+ * que decide o que dizer: "guardado", "invalido", "repetido", ou "de-outro"
+ * com a chave de quem já tem esse número — e aí a resposta certa não é guardar
+ * o telefone em duas fichas, é juntar as duas.
+ *
+ * É ajuste e não evento, como o CPF e o benefício: entre dois aparelhos vence
+ * quem mexeu por último, pelo carimbo `numerosEm`.
+ */
+function adicionarNumero(c, bruto) {
+  if (!valido(bruto)) return { desfecho: "invalido" };
+  const k = chaveDe(bruto);
+  if (numerosDe(c).some((n) => chaveDe(n) === k)) return { desfecho: "repetido" };
+
+  // Quem pergunta é o achar(), e não a chave: um contato pode estar morando
+  // na chave deste número sem ter mais o número — e oferecer juntar com ele
+  // seria fundir duas pessoas que nunca tiveram telefone em comum.
+  const dono = achar(bruto);
+  if (dono && dono !== c) {
+    return { desfecho: "de-outro", chave: chaveDoNumero(bruto) };
+  }
+
+  if (!Array.isArray(c.outros)) c.outros = [];
+  c.outros.push(normalizar(bruto));
+  c.numerosEm = new Date().toISOString();
+  registrar(c, "NUMERO", { texto: bonito(bruto) + " guardado" });
+  return { desfecho: "guardado" };
+}
+
+/** Tira um número. O principal não sai por aqui: sai deixando de ser principal. */
+function removerNumero(c, bruto) {
+  const k = chaveDe(bruto);
+  if (chaveDe(c.numero) === k) return false;
+  const antes = (c.outros || []).length;
+  c.outros = (c.outros || []).filter((n) => chaveDe(n) !== k);
+  if (c.outros.length === antes) return false;
+  c.numerosEm = new Date().toISOString();
+  registrar(c, "NUMERO", { texto: bonito(bruto) + " removido" });
+  return true;
+}
+
+/**
+ * Troca qual número é o principal — o que aparece na lista e o que recebe a
+ * mensagem quando não se digitou outro.
+ *
+ * A chave do contato NÃO muda junto. Ela é o endereço dos dados no aparelho, e
+ * dois celulares que rebatizassem a mesma pessoa em ordens diferentes ficariam
+ * com ela duas vezes depois da sincronia.
+ */
+function tornarPrincipal(c, bruto) {
+  const k = chaveDe(bruto);
+  if (chaveDe(c.numero) === k) return false;
+  const novo = numerosDe(c).find((n) => chaveDe(n) === k);
+  if (!novo) return false;
+
+  c.outros = juntarNumeros([c.numero], (c.outros || []).filter((n) => chaveDe(n) !== k));
+  c.numero = novo;
+  c.numerosEm = new Date().toISOString();
+  registrar(c, "NUMERO", { texto: bonito(novo) + " passou a ser o principal" });
+  return true;
+}
+
+/**
+ * Para qual número a conversa abre: o que está na tela, e não o principal —
+ * quem digitou o número de casa quer falar naquele. Devolve a forma guardada e
+ * não a digitada, que é o que resolve o nono dígito faltando na lista antiga.
+ */
+function numeroParaFalar(c, bruto) {
+  const k = chaveDe(bruto);
+  return numerosDe(c).find((n) => chaveDe(n) === k) || c.numero;
+}
+
+/**
+ * Junta duas fichas que eram a mesma pessoa. Reaproveita a mesclagem da
+ * sincronia: é o mesmo problema — dois registros de uma pessoa só — e ela já
+ * sabe não perder evento nem carimbo. Fica a chave da ficha que está aberta.
+ */
+function juntarContatos(kFica, kSai) {
+  const a = estado.contatos[kFica];
+  const b = estado.contatos[kSai];
+  if (!a || !b || a === b) return null;
+
+  const juntos = mesclarContato(a, b);
+  juntos.numero = a.numero;   // manda a ficha que está na mão de quem juntou
+  juntos.outros = juntarNumeros(numerosDe(a), numerosDe(b))
+    .filter((n) => chaveDe(n) !== chaveDe(juntos.numero));
+  juntos.numerosEm = new Date().toISOString();
+
+  estado.contatos[kFica] = juntos;
+  delete estado.contatos[kSai];
+  registrar(juntos, "NUMERO", {
+    texto: "Ficha juntada com " + (b.nome || bonito(b.numero)),
+  });
+  return juntos;
 }
 
 function beneficioDe(c) {
@@ -570,7 +756,9 @@ function pintarDiscagem() {
   }
 
   const c = achar(bruto);
-  const k = chaveDe(bruto);
+  // A chave é a da PESSOA, não a do número: quem tem dois telefones mora numa
+  // ficha só, e é ela que "respondeu" e "sem interesse" precisam achar depois.
+  const k = chaveDoNumero(bruto);
 
   // Trocou de pessoa? O nome tem de trocar junto. Sem isto, digitar o número
   // da Maria logo depois do José deixava "Sr. José" no campo — e a mensagem
@@ -578,6 +766,8 @@ function pintarDiscagem() {
   if (k !== chaveAtual) {
     // Outra pessoa, outra mensagem: o ajuste feito para a anterior não a segue.
     previaEditada = false;
+    // Os números que vieram junto da agenda são daquele contato, não deste.
+    if (numerosDaAgenda && numerosDaAgenda.chave !== chaveDe(bruto)) numerosDaAgenda = null;
     $("#nome").value = c ? c.nome || "" : "";
     const b = beneficioDe(c);
     $("#cpf").value = c && c.cpf ? cpfBonito(c.cpf) : "";
@@ -595,6 +785,14 @@ function pintarDiscagem() {
   el.innerHTML =
     `<p class="titulo">${escapar(v.titulo)}</p>` +
     (v.detalhe ? `<p class="detalhe">${escapar(v.detalhe)}</p>` : "");
+
+  // Digitou o segundo número de alguém? Tem de estar escrito. Sem isto o campo
+  // mostra "Sr. José" ao lado de um número que não é o dele na lista, e parece
+  // erro do app — ou pior, parece que o veredito é de outra pessoa.
+  if (c && chaveDe(numeroParaFalar(c, bruto)) !== chaveDe(c.numero)) {
+    el.innerHTML += `<p class="detalhe">Outro número de ` +
+      `${escapar(c.nome || bonito(c.numero))} — o principal é ${escapar(bonito(c.numero))}.</p>`;
+  }
 
   mostrar("#veredito", true);
   mostrar("#campo-nome", true);
@@ -658,6 +856,14 @@ function aplicarCamposDaDiscagem(c) {
   // genérico de "guardado" apagaria o do CPF meio segundo depois.
   const doCpf = anotarCpf(c, $("#cpf").value);
   const mexeuBeneficio = anotarBeneficio(c, $("#beneficio-numero").value, $("#beneficio-tipo").value);
+
+  // Escolher da agenda não cadastra ninguém — quem cadastra é mandar ou
+  // guardar. Então os outros telefones que vieram de lá esperam até aqui, que
+  // é quando a pessoa passa a existir de verdade.
+  if (numerosDaAgenda && numerosDe(c).some((n) => chaveDe(n) === numerosDaAgenda.chave)) {
+    for (const n of numerosDaAgenda.outros) adicionarNumero(c, n);
+    numerosDaAgenda = null;
+  }
 
   return {
     mexeu: mexeuBeneficio || doCpf === "gravado" || doCpf === "apagado",
@@ -743,7 +949,8 @@ function abrirConversa() {
   if (c.voltarEm && diasEntre(hoje(), dia(c.voltarEm)) <= 0) c.voltarEm = null;
   guardar();
 
-  const destino = "https://wa.me/55" + c.numero + "?text=" + encodeURIComponent(texto);
+  const destino = "https://wa.me/55" + numeroParaFalar(c, bruto) +
+    "?text=" + encodeURIComponent(texto);
   window.open(destino, "_blank", "noopener");
 
   pintarDiscagem();
@@ -948,7 +1155,7 @@ function pintarContatos() {
     if (!busca) return true;
     const b = beneficioDe(c);
     return digitos
-      ? c.numero.includes(busca) || b.numero.includes(busca)
+      ? numerosDe(c).some((n) => n.includes(busca)) || b.numero.includes(busca)
         || soDigitos(c.cpf).includes(busca)
       : (c.nome || "").toLowerCase().includes(busca)
         || b.tipo.toLowerCase().includes(busca);
@@ -983,7 +1190,8 @@ function pintarContatos() {
     return `<button class="item ${v.classe}${marcado ? " marcado" : ""}" data-contato="${escapar(k)}">
       <span class="cresce">
         <span class="nome">${selecionando ? (marcado ? "☑ " : "☐ ") : ""}${escapar(c.nome || bonito(c.numero))}</span>
-        <span class="sub">${escapar(bonito(c.numero))} · ${n} ${n === 1 ? "mensagem" : "mensagens"}${
+        <span class="sub">${escapar(bonito(c.numero))}${
+          numerosDe(c).length > 1 ? ` +${numerosDe(c).length - 1}` : ""} · ${n} ${n === 1 ? "mensagem" : "mensagens"}${
           jaRespondeu(c) ? " · respondeu" : ""}</span>
       </span>
       <span class="seta">›</span>
@@ -1107,7 +1315,24 @@ const ROTULO_EVENTO = {
   IMPORTADO: "Histórico importado do WhatsApp",
   BENEFICIO: "Dados do benefício",
   CPF: "CPF anotado",
+  NUMERO: "Número",
 };
+
+/**
+ * A lista de telefones da ficha. O principal vem marcado e sem botão de
+ * remover: ele sai deixando de ser principal, e não sumindo — senão dava para
+ * esvaziar a ficha e deixar a pessoa sem número nenhum.
+ */
+function pintarNumerosDaFicha(c) {
+  $("#ficha-numeros").innerHTML = numerosDe(c).map((n, i) => `
+    <div class="numero">
+      <span class="mono cresce">${escapar(bonito(n))}</span>
+      ${i === 0
+        ? `<span class="etiqueta">principal</span>`
+        : `<button class="mini" data-principal="${escapar(n)}">tornar principal</button>
+           <button class="mini apagar" data-tirar-numero="${escapar(n)}">remover</button>`}
+    </div>`).join("");
+}
 
 function abrirFicha(k) {
   const c = estado.contatos[k];
@@ -1117,6 +1342,8 @@ function abrirFicha(k) {
   $("#ficha-nome").textContent = c.nome || "Sem nome";
   $("#ficha-numero").textContent = bonito(c.numero);
   $("#ficha-editar-nome").value = c.nome || "";
+  $("#ficha-novo-numero").value = "";
+  pintarNumerosDaFicha(c);
 
   const b = beneficioDe(c);
   $("#ficha-cpf").value = c.cpf ? cpfBonito(c.cpf) : "";
@@ -1324,10 +1551,15 @@ function soONovo(c, texto) {
  * propósito: abre em qualquer coisa, hoje e daqui a dez anos.
  */
 function textoDaFicha(c) {
+  const outros = numerosDe(c).slice(1);
   const linhas = [
     "Tino — histórico de " + (c.nome || bonito(c.numero)),
     "Telefone: " + bonito(c.numero),
   ];
+  if (outros.length) {
+    linhas.push((outros.length === 1 ? "Outro telefone: " : "Outros telefones: ") +
+      outros.map(bonito).join(", "));
+  }
   if (c.cpf) linhas.push("CPF: " + cpfBonito(c.cpf));
   const b = resumoBeneficio(c);
   if (b) linhas.push("Benefício: " + b);
@@ -1400,18 +1632,30 @@ async function pedirDaAgenda(varios) {
   }
 }
 
-/** Do que o Android devolve, o que interessa: um nome e um telefone válido. */
+/**
+ * Do que o Android devolve, o que interessa: o nome e os telefones válidos.
+ * Todos eles — o primeiro vira o principal e o resto fica junto. Antes só o
+ * primeiro entrava, e o fixo do cliente sumia; depois ele ligava por lá e
+ * virava contato novo, com histórico zerado.
+ */
 function limparDaAgenda(bruto) {
   const nome = (bruto.name && bruto.name[0] ? String(bruto.name[0]) : "").trim();
-  const tels = (bruto.tel || []).map(normalizar).filter(valido);
-  return tels.length ? { nome, numero: tels[0] } : null;
+  const tels = juntarNumeros((bruto.tel || []).filter(valido));
+  return tels.length ? { nome, numero: tels[0], outros: tels.slice(1) } : null;
 }
+
+/* Os outros telefones do contato escolhido na agenda esperam aqui até alguém
+   mandar ou guardar. Escolher da agenda ainda não cadastra ninguém. */
+let numerosDaAgenda = null;
 
 async function escolherDaAgenda() {
   const [escolhido] = await pedirDaAgenda(false);
   if (!escolhido) return;
   const c = limparDaAgenda(escolhido);
   if (!c) return avisar("Esse contato não tem telefone que dê para usar.");
+
+  numerosDaAgenda = c.outros.length
+    ? { chave: chaveDe(c.numero), outros: c.outros } : null;
 
   const n = $("#numero");
   n.value = c.numero;
@@ -1433,10 +1677,14 @@ async function trazerVariosDaAgenda() {
     const existente = achar(c.numero);
     if (existente) {
       if (!existente.nome && c.nome) existente.nome = c.nome;
+      // Quem já estava aqui pode ter um telefone a menos do que a agenda tem.
+      // Acrescentar é seguro: número que já é de outra pessoa volta recusado
+      // pelo próprio adicionarNumero, e ninguém é juntado sem alguém mandar.
+      for (const extra of [c.numero, ...c.outros]) adicionarNumero(existente, extra);
       jaTinha++;
       continue;
     }
-    criar(c.numero, c.nome);
+    criar(c.numero, c.nome, c.outros);
     novos++;
   }
   guardar();
@@ -2023,6 +2271,71 @@ function ligar() {
     c.nome = $("#ficha-editar-nome").value.trim();
     guardar();
     $("#ficha-nome").textContent = c.nome || "Sem nome";
+  });
+
+  /* Acrescentar telefone. O caso que importa é o último: o número digitado já
+     é de outra ficha. Guardar em dobro seria criar a duplicata que este app
+     existe para evitar, então a saída oferecida é juntar as duas — com
+     pergunta, porque juntar não tem volta. */
+  const adicionarDaFicha = () => {
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+    const bruto = $("#ficha-novo-numero").value;
+    const r = adicionarNumero(c, bruto);
+
+    if (r.desfecho === "invalido") return avisar("Número incompleto.");
+    if (r.desfecho === "repetido") return avisar("Esse número já está nesta ficha.");
+
+    if (r.desfecho === "de-outro") {
+      const outro = estado.contatos[r.chave];
+      const quem = outro.nome || bonito(outro.numero);
+      if (!confirm(`${bonito(bruto)} já está guardado em ${quem}.\n\n` +
+        `Juntar as duas fichas numa só?\n\n` +
+        `O histórico das duas fica junto, nesta aqui. Não tem como voltar atrás.`)) return;
+      juntarContatos(chaveFicha, r.chave);
+      if (!guardar()) return;
+      abrirFicha(chaveFicha);
+      pintarContatos();
+      pintarFila();
+      return avisar("Fichas juntadas.");
+    }
+
+    if (!guardar()) return;
+    abrirFicha(chaveFicha);
+    pintarContatos();
+    avisar("Número guardado.");
+  };
+
+  $("#ficha-add-numero").addEventListener("click", adicionarDaFicha);
+  $("#ficha-novo-numero").addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") { ev.preventDefault(); adicionarDaFicha(); }
+  });
+
+  $("#ficha-numeros").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    const c = estado.contatos[chaveFicha];
+    if (!c) return;
+
+    if (b.dataset.principal) {
+      if (!tornarPrincipal(c, b.dataset.principal)) return;
+      if (!guardar()) return;
+      abrirFicha(chaveFicha);
+      pintarContatos();
+      pintarFila();
+      return avisar("Agora é este o número principal.");
+    }
+
+    if (b.dataset.tirarNumero) {
+      const n = b.dataset.tirarNumero;
+      if (!confirm(`Tirar ${bonito(n)} desta ficha?\n\n` +
+        `O histórico fica — só o número sai.`)) return;
+      if (!removerNumero(c, n)) return;
+      if (!guardar()) return;
+      abrirFicha(chaveFicha);
+      pintarContatos();
+      avisar("Número removido.");
+    }
   });
 
   $("#ficha-cpf").addEventListener("change", () => {

@@ -48,8 +48,9 @@ imitam o WhatsApp Web, e são exatamente elas que derrubam o número.
 
 **Da agenda do celular, sim.** No Chrome do Android existe uma permissão do
 próprio sistema: o app pede, aparece a tela do Android, e você escolhe quem
-entregar. Não é acesso à agenda — é você passando os contatos um a um. Há dois
-caminhos: um contato na aba **Discar** e vários de uma vez na aba **Contatos**.
+entregar. Não é acesso à agenda — é você passando os contatos um a um. De cada
+um vêm **todos os telefones**, e não só o primeiro. Há dois caminhos: um contato
+na aba **Discar** e vários de uma vez na aba **Contatos**.
 No computador e no iPhone o botão nem aparece, porque a permissão não existe.
 
 **Digitando**, sempre. É o caminho que funciona em qualquer aparelho, e é o
@@ -65,16 +66,34 @@ você decidir chamar.
 **Hoje** — a fila do dia pela régua de contato: só quem está no prazo. De 800
 nomes costumam sobrar poucas dezenas. Mandar menos é o que faz o chip durar.
 
-**Contatos** — busca por nome, telefone, CPF, número do benefício ou tipo,
-com filtros de quem respondeu, quem nunca respondeu e quem pediu para parar.
+**Contatos** — busca por nome, qualquer um dos telefones, CPF, número do
+benefício ou tipo, com filtros de quem respondeu, quem nunca respondeu e quem
+pediu para parar.
 
-**Ficha** — histórico completo, anotações, a conversa guardada e os dados do
-benefício. No alto dela, **Falar com esta pessoa** leva para a discagem já
+**Ficha** — histórico completo, os telefones da pessoa, anotações, a conversa
+guardada e os dados do benefício. No alto dela, **Falar com esta pessoa** leva para a discagem já
 preenchida: é o caminho de volta da aba Hoje, que sem ele apontava para uma
 pessoa sem deixar você falar com ela.
 
 **Ajustes** — seu nome, a régua, os modelos de mensagem com **taxa de resposta
 de cada um**, e a cópia de segurança.
+
+## Mais de um número por pessoa
+
+Ter dois telefones é o normal, não a exceção: o de casa e o do trabalho, o do
+filho, o que a pessoa passa a usar quando o chip cai. Todos ficam na mesma
+ficha, e qualquer um deles abre a mesma memória — digitar o fixo do Sr. José
+mostra as duas mensagens que já foram para o celular dele.
+
+Na ficha, em **Números**, dá para acrescentar, escolher qual é o **principal**
+e tirar os que não servem mais. O principal é o que aparece na lista e o que
+recebe a mensagem quando você não digitou outro; se digitou, a conversa abre
+no que está na tela.
+
+**Se o número já for de outra ficha**, o app não guarda em dobro: ele diz de
+quem é e oferece **juntar as duas numa só**. O histórico dos dois lados fica
+junto e a duplicata some — é a saída para o estrago que já existia antes de o
+recurso existir.
 
 ## Dados do cliente
 
@@ -228,6 +247,11 @@ uma empresa.
 guardados como a mesma pessoa. Sem isso, listas antigas fariam o app dizer
 "número novo" para quem já foi chamado seis vezes — justo o erro que ele existe
 para evitar.
+
+**Um número só nunca foi suficiente.** A pessoa é uma; os telefones dela são
+vários, e todos apontam para a mesma ficha. Guardar um por contato criava duas
+memórias da mesma pessoa — e a segunda começava do zero, dizendo "pode chamar"
+para quem já tinha pedido para parar.
 
 **A mensagem padrão termina oferecendo saída** ("se não tiver interesse é só me
 dizer"). Parece perder venda e faz o contrário: quem tem saída responde "não,
