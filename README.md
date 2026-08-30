@@ -271,6 +271,21 @@ npx serve .
 
 O service worker e a instalação só funcionam em `https` ou `localhost`.
 
+### Conferir o modelo de dados
+
+```
+node scripts/teste.js
+```
+
+Não instala nada e não abre navegador: carrega o `app.js` num contexto de
+mentira e pergunta quem é quem depois de mexer nos números — achar pelo segundo
+telefone, trocar o principal, juntar duas fichas, mesclar dois aparelhos, ler
+contato guardado antes do campo existir.
+
+É a única parte do app onde um defeito não aparece na tela. Se ele confunde
+duas pessoas, a mensagem sai para quem pediu para parar e nada parece errado.
+Mexeu em número, chave ou mesclagem, rode isto antes de subir.
+
 ### Publicar
 
 Repositório no GitHub com **Pages** ligado na branch principal. `git push` e
