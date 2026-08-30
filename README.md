@@ -58,7 +58,9 @@ mesmo número que você digitaria no WhatsApp de qualquer jeito.
 
 ## O que tem dentro
 
-**Discar** — digita o número, lê o veredito, escolhe o modelo, abre a conversa.
+**Discar** — digita o número e a pessoa se identifica ali mesmo: nome grande,
+telefone pequeno embaixo, do mesmo jeito que na ficha e na lista. Abaixo dela o
+veredito, o modelo e a conversa.
 Depois marca o que aconteceu com um toque. Dá também para **só guardar, sem
 mandar mensagem**: o número entra na memória e a régua começa no dia em que
 você decidir chamar.

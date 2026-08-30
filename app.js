@@ -749,7 +749,7 @@ function pintarDiscagem() {
 
   if (!ok) {
     chaveAtual = null;
-    ["#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#campo-previa",
+    ["#quem", "#veredito", "#campo-nome", "#campo-beneficio", "#campo-modelo", "#campo-previa",
       "#abrir", "#so-guardar", "#desfecho", "#agendar", "#ver-ficha"]
       .forEach((s) => mostrar(s, false));
     return;
@@ -794,6 +794,8 @@ function pintarDiscagem() {
       `${escapar(c.nome || bonito(c.numero))} — o principal é ${escapar(bonito(c.numero))}.</p>`;
   }
 
+  pintarQuem(c, bruto);
+  mostrar("#quem", true);
   mostrar("#veredito", true);
   mostrar("#campo-nome", true);
   mostrar("#campo-beneficio", true);
@@ -807,6 +809,24 @@ function pintarDiscagem() {
   pintarRetorno(c, { campo: "#voltar-em", limpar: "#tirar-retorno", texto: "#agendar-atual" });
 
   atualizarPrevia();
+}
+
+/**
+ * A identificação de quem está na tela. O nome em cima porque é ele que se lê;
+ * o telefone embaixo porque é ele que procura. Sem nome, o número sobe e ocupa
+ * a linha grande sozinho — repetir o mesmo número duas vezes seria só barulho.
+ *
+ * O nome sai do campo, e não do contato guardado: quem está cadastrando alguém
+ * novo vê o nome aparecer enquanto digita, e é assim que dá para conferir que
+ * a mensagem vai sair com o nome certo antes de ela sair.
+ */
+function pintarQuem(c, bruto) {
+  const nome = ($("#nome").value || "").trim() || (c ? c.nome : "") || "";
+  const numero = bonito(c ? numeroParaFalar(c, bruto) : normalizar(bruto));
+
+  $("#quem-nome").textContent = nome || numero;
+  $("#quem-numero").textContent = nome ? numero : "";
+  $("#quem-numero").classList.toggle("oculto", !nome);
 }
 
 /** Troca os marcadores pelo que eles valem na hora de mandar. */
@@ -2155,7 +2175,12 @@ function irPara(tela) {
 function ligar() {
   // -- discagem
   $("#numero").addEventListener("input", pintarDiscagem);
-  $("#nome").addEventListener("input", () => { atualizarPrevia(); });
+  $("#nome").addEventListener("input", () => {
+    atualizarPrevia();
+    // O nome que está sendo digitado é o nome que a pessoa passa a ter na
+    // tela. Sem isto ela só apareceria depois de guardar.
+    if (chaveAtual) pintarQuem(achar($("#numero").value), $("#numero").value);
+  });
   $("#modelo").addEventListener("change", () => {
     previaEditada = false;
     atualizarPrevia();

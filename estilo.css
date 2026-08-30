@@ -304,6 +304,14 @@ button { font: inherit; cursor: pointer; }
 
 .desfecho { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borda); }
 
+/* ---------- quem é a pessoa ---------- */
+
+/* O mesmo desenho do alto da ficha, de propósito: as três telas identificam
+   alguém do mesmo jeito, e é isso que faz uma parecer continuação da outra. */
+.quem { margin: 16px 0 10px; }
+.quem b { display: block; font-size: 20px; letter-spacing: -0.02em; }
+.quem .mono { display: block; margin-top: 2px; font-size: 13px; color: var(--fraco); }
+
 /* ---------- numeros do contato ---------- */
 
 /* Um por linha, o principal em cima. Trocar ou tirar número é coisa rara e
